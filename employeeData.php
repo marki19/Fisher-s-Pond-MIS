@@ -14,7 +14,5 @@ $sql = "INSERT INTO employee (FirstName, LastName, BirthDate, Email, ContactNumb
         ':ContactNumber' => $ContactNumber,
         ':PositionID' => $PositionID
     ]);
-
-    echo "New employee '$FirstName $LastName' added successfully!<br>";
 }
 ?>

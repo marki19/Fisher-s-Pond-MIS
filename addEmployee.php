@@ -1,12 +1,7 @@
 <?php
 require 'employeeData.php';
 
-// Fetch the next StaffID for display only
-$query = $pdo->query("SELECT MAX(StaffID) AS max_id FROM employee");
-$row = $query->fetch(PDO::FETCH_ASSOC);
-$nextStaffID = ($row['max_id'] !== null) ? $row['max_id'] + 1 : 0; 
-
-// ADD THIS: Fetch all available positions from the database
+// Fetch all available positions from the database
 $posQuery = $pdo->query("SELECT PositionID, PositionName FROM position");
 $positions = $posQuery->fetchAll(PDO::FETCH_ASSOC);
 
@@ -19,29 +14,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $PositionID = $_POST['PositionID'];
     
     addEmployee($FirstName, $LastName, $BirthDate, $Email, $ContactNumber, $PositionID);
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
+
+    // Redirect back to the main dashboard after adding the employee
+    header("Location: index.php");
+    exit();
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Add Employee</title>
 <style>
-body { font-size: 18px; color: #000000; }
-label { display: inline-block; width: 160px; }
-input, button { font-size: 18px; margin-bottom: 10px; }
-.readonly-box { background-color: #e9ecef; color: #6c757d; border: 1px solid #ced4da; cursor: not-allowed; }
+/* Scoped styles just for this form */
+.employee-form label { display: inline-block; width: 160px; }
+.employee-form input, .employee-form select, .employee-form button { font-size: 18px; margin-bottom: 10px; }
 </style>
-</head>
-<body>
-<h1>Add a New Employee</h1>
-<form method="POST" action="">
 
-    <label>Staff ID (Auto):</label>
-    <input type="number" class="readonly-box" value="<?= $nextStaffID ?>" readonly><br>
+<h1>Add a New Employee</h1>
+<form class="employee-form" method="POST" action="addEmployee.php">
 
     <label>First Name:</label><input type="text" name="FirstName" required><br>
     <label>Last Name:</label><input type="text" name="LastName" required><br>
@@ -49,7 +36,7 @@ input, button { font-size: 18px; margin-bottom: 10px; }
     <label>Email:</label><input type="email" name="Email" required><br>
     <label>Contact Number:</label><input type="tel" name="ContactNumber" required><br>
     
-   <label>Position:</label>
+    <label>Position:</label>
     <select name="PositionID" required>
         <option value="" disabled selected>-- Select a Role --</option>
         
@@ -63,5 +50,3 @@ input, button { font-size: 18px; margin-bottom: 10px; }
 
     <button type="submit">Add Employee</button>
 </form>
-</body>
-</html>
