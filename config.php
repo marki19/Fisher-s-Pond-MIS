@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set(timezoneId: 'Asia/Manila');
 // Database Connection
 $host = 'localhost';
 $db = 'fishers_pond_mis';
@@ -12,7 +13,7 @@ $options = [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ];
 try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
+    $pdo = new PDO(dsn: $dsn, username: $user, password: $pass, options: $options);
    
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
