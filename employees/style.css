@@ -1,0 +1,58 @@
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    margin: 0; padding: 0;
+    min-height: 100vh;
+    background-color: #fafafa;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.kiosk-container {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+    width: 100%; max-width: 480px;
+    text-align: center;
+}
+
+h1 { font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 8px; }
+.subtitle { color: #6b7280; margin-bottom: 32px; font-size: 0.95rem; }
+
+.btn {
+    display: inline-block; width: 100%;
+    padding: 14px 20px; font-size: 1rem; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 12px;
+}
+.btn-clock-in { background: #10b981; color: white; }
+.btn-clock-in:hover { background: #059669; }
+.btn-clock-out { background: #ef4444; color: white; }
+.btn-clock-out:hover { background: #dc2626; }
+.btn-outline { background: transparent; border: 1px solid #d1d5db; color: #374151; }
+.btn-outline:hover { background: #f3f4f6; }
+
+.form-group { margin-bottom: 20px; text-align: left; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.875rem; color: #4b5563; }
+.form-group input {
+    width: 100%; padding: 12px 16px; border: 1px solid #d1d5db;
+    border-radius: 8px; outline: none; transition: border-color 0.2s; font-size: 1rem;
+    box-sizing: border-box;
+}
+.form-group input:focus { border-color: #3b82f6; }
+
+.alert {
+    padding: 12px; border-radius: 8px; margin-bottom: 24px; text-align: center; font-weight: 500;
+}
+.alert-success { background: #d1fae5; color: #065f46; }
+.alert-error { background: #fee2e2; color: #991b1b; }
+
+.link-btn {
+    background: none; border: none; color: #3b82f6; font-weight: 500;
+    cursor: pointer; padding: 0; outline: none; font-size: 0.9rem; margin-top: 12px;
+}
+.link-btn:hover { text-decoration: underline; }
+
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }

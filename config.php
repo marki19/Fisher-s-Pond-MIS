@@ -1,20 +1,15 @@
 <?php
-date_default_timezone_set(timezoneId: 'Asia/Manila');
-// Database Connection
-$host = 'localhost';
-$db = 'fishers_pond_mis';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
+date_default_timezone_set('Asia/Manila');
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
+$host = 'localhost';
+$dbname = 'fishers_pond_mis'; // Kept original db name to maintain compatibility
+$username = 'root';
+$password = '';
+
 try {
-    $pdo = new PDO(dsn: $dsn, username: $user, password: $pass, options: $options);
-   
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
