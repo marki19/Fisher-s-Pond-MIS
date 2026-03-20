@@ -28,60 +28,6 @@ $msg = $_SESSION['admin_msg'] ?? '';
 $msgType = $_SESSION['admin_msg_type'] ?? '';
 unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    
-    if ($action === 'save_employee') {
-        $data = [
-            'staffID' => $_POST['staffID'] ?? '',
-            'Username' => $_POST['Username'] ?? '',
-            'FirstName' => trim($_POST['FirstName']),
-            'LastName' => trim($_POST['LastName']),
-            'BirthDate' => $_POST['BirthDate'],
-            'Email' => trim($_POST['Email']),
-            'ContactNumber' => trim($_POST['ContactNumber']),
-            'PositionID' => $_POST['PositionID']
-        ];
-        
-        if (!empty($data['staffID'])) {
-            updateEmployee($pdo, $data);
-            $_SESSION['admin_msg'] = 'Employee updated successfully.';
-        } else {
-            addEmployee($pdo, $data);
-            $_SESSION['admin_msg'] = '✅ New employee added!';
-        }
-        $_SESSION['admin_msg_type'] = 'success';
-        header('Location: index.php?tab=active');
-        exit;
-    } elseif ($action === 'deactivate') {
-        $deleteStaffID = (int)($_POST['delete_staffID'] ?? 0);
-        if ($deleteStaffID > 0) {
-            deactivateEmployee($pdo, $deleteStaffID);
-            $_SESSION['admin_msg'] = 'Employee deactivated safely.';
-            $_SESSION['admin_msg_type'] = 'success';
-        }
-        header('Location: index.php?tab=active');
-        exit;
-    } elseif ($action === 'reactivate') {
-        $staffID = (int)($_POST['staffID'] ?? 0);
-        if ($staffID > 0) {
-            reactivateEmployee($pdo, $staffID);
-            $_SESSION['admin_msg'] = 'Employee reactivated successfully.';
-            $_SESSION['admin_msg_type'] = 'success';
-        }
-        header('Location: index.php?tab=deactivated');
-        exit;
-    } elseif ($action === 'update_admin_account') {
-        $res = updateAdminAccount($pdo, $_SESSION['admin_username'], $_POST);
-        if ($res['ok']) {
-            $_SESSION['admin_username'] = $res['newUsername'];
-        }
-        $_SESSION['admin_msg'] = $res['msg'];
-        $_SESSION['admin_msg_type'] = $res['ok'] ? 'success' : 'error';
-    }
-    header('Location: ' . $_SERVER['PHP_SELF'] . '?tab=' . $tab);
-    exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -170,13 +116,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         )">Edit</button>
                         
                         <?php if ($isActive): ?>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('Deactivate this employee?');">
+                        <form method="POST" action="action.php" style="display:inline;" onsubmit="return confirm('Deactivate this employee?');">
                             <input type="hidden" name="action" value="deactivate">
                             <input type="hidden" name="delete_staffID" value="<?= htmlspecialchars($emp['staffID']) ?>">
                             <button type="submit" class="btn btn-danger">Deactivate</button>
                         </form>
                         <?php else: ?>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('Reactivate this employee?');">
+                        <form method="POST" action="action.php" style="display:inline;" onsubmit="return confirm('Reactivate this employee?');">
                             <input type="hidden" name="action" value="reactivate">
                             <input type="hidden" name="staffID" value="<?= htmlspecialchars($emp['staffID']) ?>">
                             <button type="submit" class="btn btn-primary" style="background:#10b981;">Reactivate</button>
@@ -220,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php elseif ($tab === 'settings'): ?>
         <div style="background: white; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; max-width: 600px;">
             <h2 style="font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-bottom: 16px;">Admin Account Settings</h2>
-            <form method="POST">
+            <form method="POST" action="action.php">
                 <input type="hidden" name="action" value="update_admin_account">
                 <div class="form-group">
                     <label style="display:block; margin-bottom:6px; font-weight:500;">Username</label>
@@ -250,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div id="employeeModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle">Add Employee</h2>
-            <form method="POST">
+            <form method="POST" action="action.php">
                 <input type="hidden" name="action" value="save_employee">
                 <input type="hidden" name="staffID" id="empStaffID">
                 

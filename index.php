@@ -28,30 +28,8 @@ if ((isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === tru
 $error = $_SESSION['login_error'] ?? '';
 unset($_SESSION['login_error']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $login_id = trim($_POST['login_id'] ?? '');
-    $password = $_POST['password'] ?? '';
-    
-    $res = unifiedLogin($pdo, $login_id, $password);
-    
-    if ($res['ok']) {
-        if ($res['role'] === 'admin') { 
-            $_SESSION['admin_msg'] = 'Welcome back, ' . htmlspecialchars($_SESSION['admin_username']) . '!';
-            $_SESSION['admin_msg_type'] = 'success';
-            header('Location: admin/index.php'); 
-            exit; 
-        } else { // This else block is for non-admin roles (employees/kiosk)
-            $_SESSION['kiosk_msg'] = 'Welcome back, ' . htmlspecialchars($_SESSION['active_name']) . '!';
-            $_SESSION['kiosk_msg_type'] = 'success';
-            header('Location: employees/index.php'); 
-            exit;
-        }
-    } else {
-        $_SESSION['login_error'] = $res['msg'];
-        header('Location: index.php');
-        exit;
-    }
-}
+// Only presentation logic flows below.
+
 
 $logoutMsg = $_SESSION['logout_msg'] ?? '';
 unset($_SESSION['logout_msg']);
@@ -115,7 +93,7 @@ unset($_SESSION['logout_msg']);
             </div>
         <?php endif; ?>
 
-        <form method="POST">
+        <form method="POST" action="authAction.php">
             <div class="form-group">
                 <input type="text" name="login_id" placeholder="Username or Staff ID" required autofocus>
             </div>
