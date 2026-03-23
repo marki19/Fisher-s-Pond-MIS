@@ -19,7 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else { // This else block is for non-admin roles (employees/kiosk)
             $_SESSION['kiosk_msg'] = 'Welcome back, ' . htmlspecialchars($_SESSION['active_name']) . '!';
             $_SESSION['kiosk_msg_type'] = 'success';
-            header('Location: employees/index.php'); 
+            
+            // Route Manager (1) and Cashier (3) to POS, others to Time Clock Kiosk
+            if ($_SESSION['position_id'] == 1 || $_SESSION['position_id'] == 3) {
+                clockIn($pdo, $_SESSION['active_staffID']); // Auto-clock in!
+                header('Location: pos/index.php');
+            } else {
+                header('Location: employees/index.php'); 
+            }
             exit;
         }
     } else {

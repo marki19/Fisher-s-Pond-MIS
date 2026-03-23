@@ -32,6 +32,7 @@ function unifiedLogin(PDO $pdo, string $login_id, string $password): array {
 
         $_SESSION['active_staffID'] = $employee['staffID'];
         $_SESSION['active_name']    = $employee['FirstName'] . ' ' . $employee['LastName'];
+        $_SESSION['position_id']    = $employee['PositionID'];
         return ['ok' => true, 'role' => 'staff', 'redirect' => 'employees/index.php'];
     }
 

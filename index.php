@@ -12,6 +12,11 @@ require __DIR__ . '/employees/data.php';
 // If a logged-in user navigates back to the root login page, instantly destroy their session for strict security.
 if ((isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) || isset($_SESSION['active_staffID'])) {
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($_GET['keep'])) {
+        // Auto-clock out POS staff on logout
+        if (isset($_SESSION['active_staffID']) && isset($_SESSION['position_id']) && in_array($_SESSION['position_id'], [1, 3])) {
+            clockOut($pdo, $_SESSION['active_staffID']);
+        }
+        
         $_SESSION = [];
         session_destroy();
         if (ini_get("session.use_cookies")) {

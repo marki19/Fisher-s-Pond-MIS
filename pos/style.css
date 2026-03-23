@@ -1,0 +1,65 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; height: 100vh; overflow: hidden; }
+
+.pos-layout { display: flex; height: 100vh; }
+
+.pos-sidebar { width: 250px; background: #0f172a; color: white; display: flex; flex-direction: column; padding: 20px; }
+.brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; }
+.nav-menu { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.nav-menu a { color: #94a3b8; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 500; transition: all 0.2s; }
+.nav-menu a:hover, .nav-menu a.active { background: #1e293b; color: white; }
+.sidebar-footer { margin-top: auto; }
+
+.btn { padding: 12px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; }
+.btn-outline { background: transparent; border: 1px solid #475569; color: white; }
+.btn-outline:hover { background: #334155; }
+.btn-logout { background: #ef4444; color: white; }
+.btn-logout:hover { background: #dc2626; }
+
+.pos-main { flex: 1; display: flex; flex-direction: column; background: #f1f5f9; }
+.pos-header { height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+.pos-header h2 { font-size: 1.25rem; font-weight: 600; }
+.user-info { font-weight: 500; color: #475569; }
+
+.pos-content { flex: 1; display: flex; overflow: hidden; }
+
+.menu-area { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
+.category-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.category-tabs button { padding: 10px 20px; border: 1px solid #cbd5e1; background: white; border-radius: 20px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+.category-tabs button.active { background: #0f172a; color: white; border-color: #0f172a; }
+
+.items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; padding-bottom: 50px; }
+.item-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; text-align: center; }
+.item-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #cbd5e1; }
+.disabled-item { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; }
+.disabled-item:hover { transform: none; box-shadow: none; border-color: #e2e8f0; }
+.item-name { font-weight: 600; margin-bottom: 8px; color: #1e293b; }
+.item-price { color: #3b82f6; font-weight: 700; }
+
+.cart-area { width: 350px; background: white; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+.cart-header { padding: 20px; border-bottom: 1px solid #e2e8f0; font-size: 1.125rem; font-weight: 600; }
+.cart-items { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; }
+.cart-empty { text-align: center; color: #94a3b8; margin-top: 50px; }
+.cart-footer { padding: 20px; border-top: 1px solid #e2e8f0; }
+.totals-row { display: flex; justify-content: space-between; margin-bottom: 10px; color: #64748b; font-weight: 500; }
+.grand-total { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 10px; margin-bottom: 20px; }
+.btn-pay { width: 100%; background: #22c55e; color: white; font-size: 1.125rem; padding: 16px; }
+.btn-pay:hover { background: #16a34a; }
+
+/* Modal Styles */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); z-index: 1000; }
+.modal { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); position: relative; }
+.modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; }
+.form-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; outline: none; }
+.form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.btn-clock-in { background: #3b82f6; color: white; border: none; cursor: pointer; }
+.btn-clock-out { background: #ef4444; color: white; border: none; cursor: pointer; }
+.btn-clock-in:hover { background: #2563eb; }
+.btn-clock-out:hover { background: #dc2626; }
+
+/* Toast Notification Styles */
+.toast-container { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+.toast { background: #0f172a; color: white; padding: 16px 24px; border-radius: 8px; font-weight: 500; font-size: 0.95rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; max-width: 350px; opacity: 1; transition: opacity 0.3s; }
+.toast.toast-error { background: #ef4444; }
+.toast.toast-success { background: #10b981; }
+@keyframes popIn { 0% { transform: translateY(-20px) scale(0.9); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }

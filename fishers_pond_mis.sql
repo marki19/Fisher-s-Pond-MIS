@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 11, 2026 at 07:19 AM
+-- Generation Time: Mar 23, 2026 at 10:32 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -38,7 +38,7 @@ CREATE TABLE `admin_users` (
 --
 
 INSERT INTO `admin_users` (`AdminID`, `Username`, `PasswordHash`) VALUES
-(1, 'superAdmin', '$2y$10$Fe5iz3C0WpL9hAXHmfu3HeIMqodZlhw0NMt5C7ri4/5ZqdHnvnD4.');
+(1, 'superAdmin', '$2y$10$hMru4iJxmNa84qV/l3gKaOc15MvCxMHyulTKsVw3huiztD5.KJogu');
 
 -- --------------------------------------------------------
 
@@ -53,7 +53,6 @@ CREATE TABLE `employee` (
   `BirthDate` date DEFAULT NULL,
   `Email` varchar(64) DEFAULT NULL,
   `ContactNumber` int(11) NOT NULL,
-  `Password` varchar(255) NOT NULL,
   `PositionID` int(2) DEFAULT NULL,
   `IsActive` tinyint(1) DEFAULT 1,
   `Username` varchar(50) DEFAULT NULL,
@@ -64,9 +63,10 @@ CREATE TABLE `employee` (
 -- Dumping data for table `employee`
 --
 
-INSERT INTO `employee` (`staffID`, `FirstName`, `LastName`, `BirthDate`, `Email`, `ContactNumber`, `Password`, `PositionID`, `IsActive`, `Username`, `PasswordHash`) VALUES
-(1, 'Mark', 'Antipo', '2006-04-19', 'markantipo@gmail.com', 2147483647, '', 1, 1, 'mark', '$2y$10$Py4BbnzQIyitIOwSat4ZAeWHXI8DjoQKi07Ts1KpsKvhMNqSzN/.a'),
-(2, 'ffa', 'miranda', '2026-04-03', 'cmer@danielprints.ai', 2147483647, '', 1, 1, NULL, NULL);
+INSERT INTO `employee` (`staffID`, `FirstName`, `LastName`, `BirthDate`, `Email`, `ContactNumber`, `PositionID`, `IsActive`, `Username`, `PasswordHash`) VALUES
+(1, 'cemen', 'miranda', '2026-03-18', 'markantipo@gmail.com', 2147483647, 1, 1, 'cemen', '$2y$10$9IZl1FL9GcP.ftSgZlAcp.WFT0KmRtReFMfllnVnHKRaaDpyXTdh2'),
+(2, 'ffa', 'ffa', '2026-03-18', 'cmer@danielprints.ai', 2147483647, 4, 0, NULL, NULL),
+(3, 'ino', 'chavez', '2026-12-25', 'markantipo@gmail.com', 2147483647, 2, 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -87,7 +87,11 @@ CREATE TABLE `employeeshift` (
 --
 
 INSERT INTO `employeeshift` (`StaffID`, `ShiftID`, `ShiftDate`, `ClockIn`, `ClockOut`) VALUES
-(1, 0, '2026-03-07', '2026-03-07 23:09:02', '2026-03-07 23:09:06');
+(1, 2, '2026-03-19', '2026-03-19 15:50:28', '2026-03-19 15:50:39'),
+(1, 3, '2026-03-20', '2026-03-20 21:18:48', '2026-03-20 21:24:41'),
+(1, 4, '2026-03-20', '2026-03-20 21:27:51', '2026-03-20 21:28:06'),
+(1, 5, '2026-03-20', '2026-03-20 22:01:13', '2026-03-20 22:01:18'),
+(1, 6, '2026-03-23', '2026-03-23 09:49:15', NULL);
 
 -- --------------------------------------------------------
 
@@ -176,7 +180,13 @@ ALTER TABLE `admin_users`
 -- AUTO_INCREMENT for table `employee`
 --
 ALTER TABLE `employee`
-  MODIFY `staffID` int(5) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `staffID` int(5) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `employeeshift`
+--
+ALTER TABLE `employeeshift`
+  MODIFY `ShiftID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `position`
