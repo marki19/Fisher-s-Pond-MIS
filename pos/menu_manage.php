@@ -75,31 +75,7 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
     <meta charset="UTF-8">
     <title>Menu Management | Fisher's Pond POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .page-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
-        .alert-success { background-color: #dcfce7; color: #166534; }
-        .alert-error { background-color: #fee2e2; color: #991b1b; }
-        
-        .card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .card h3 { font-size: 1.25rem; font-weight: 600; color: #0f172a; }
-        
-        .flex-row { display: flex; gap: 15px; align-items: flex-end; }
-        .form-group-inline { flex: 1; }
-        .form-group-inline label { display: block; font-size: 0.875rem; color: #475569; margin-bottom: 6px; font-weight: 500; }
-        
-        table.data-table { width: 100%; border-collapse: collapse; }
-        table.data-table th, table.data-table td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        table.data-table th { font-size: 0.875rem; color: #64748b; font-weight: 600; text-transform: uppercase; background: #f8fafc; }
-        table.data-table tbody tr:hover { background: #f1f5f9; }
-        
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-        .badge-active { background: #dcfce7; color: #166534; }
-        .badge-inactive { background: #fee2e2; color: #991b1b; }
-        .btn-small { padding: 6px 12px; font-size: 0.875rem; }
-    </style>
+    <link rel="stylesheet" href="pos/style.css">
 </head>
 <body>
     <div class="pos-layout">
@@ -113,8 +89,8 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                 <a href="menu_manage.php" class="active">Menu Management</a>
             </nav>
             <div class="sidebar-footer">
-                <button id="btnQuickClock" class="btn btn-outline" style="width: 100%; margin-bottom: 10px;">Quick Clock In/Out</button>
-                <a href="../index.php" class="btn btn-logout" style="text-align: center; display: block; text-decoration: none;">Exit POS</a>
+                <button id="btnQuickClock" class="btn btn-outline btn-full-width mb-10">Quick Clock In/Out</button>
+                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
             </div>
         </aside>
 
@@ -143,26 +119,26 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                     </div>
                     <form method="POST">
                         <input type="hidden" name="action" value="add_item">
-                        <div class="flex-row">
+                        <div class="flex-row-align-end">
                             <div class="form-group-inline">
                                 <label>Item Name</label>
-                                <input type="text" name="ItemName" required class="form-input" style="margin:0;">
+                                <input type="text" name="ItemName" required class="form-input form-input-nomargin">
                             </div>
                             <div class="form-group-inline">
                                 <label>Category</label>
-                                <select name="CategoryID" required class="form-input" style="margin:0;">
+                                <select name="CategoryID" required class="form-input form-input-nomargin">
                                     <?php foreach ($categories as $cat): ?>
                                         <option value="<?= $cat['CategoryID'] ?>"><?= htmlspecialchars($cat['CategoryName']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="form-group-inline" style="flex: 0.5;">
+                            <div class="form-group-inline flex-05">
                                 <label>Price (₱)</label>
-                                <input type="number" step="0.01" min="0" name="Price" required class="form-input" style="margin:0;">
+                                <input type="number" step="0.01" min="0" name="Price" required class="form-input form-input-nomargin">
                             </div>
-                            <div class="form-group-inline" style="flex: 0.5;">
+                            <div class="form-group-inline flex-05">
                                 <label>Status</label>
-                                <select name="IsAvailable" class="form-input" style="margin:0;">
+                                <select name="IsAvailable" class="form-input form-input-nomargin">
                                     <option value="1">Available</option>
                                     <option value="0">Disabled</option>
                                 </select>
@@ -174,11 +150,11 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                     </form>
                 </div>
                 
-                <div class="card" style="margin-bottom: 10px;">
-                    <form method="POST" style="display: flex; gap: 10px; align-items: center;">
+                <div class="card mb-10">
+                    <form method="POST" class="flex-row-center">
                         <input type="hidden" name="action" value="add_cat">
-                        <input type="text" name="CategoryName" placeholder="New Category Name" required class="form-input" style="margin:0; width: 250px;">
-                        <button type="submit" class="btn btn-outline" style="color: #0f172a; border-color: #cbd5e1;">Add Category</button>
+                        <input type="text" name="CategoryName" placeholder="New Category Name" required class="form-input form-input-nomargin input-w-250">
+                        <button type="submit" class="btn btn-outline btn-border-gray">Add Category</button>
                     </form>
                 </div>
 
@@ -201,24 +177,15 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                             <?php foreach ($menuItems as $item): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($item['CategoryName']) ?></td>
-                                    <td style="font-weight: 500;"><?= htmlspecialchars($item['ItemName']) ?></td>
-                                    <td>₱<?= number_format($item['Price'], 2) ?></td>
                                     <td>
-                                        <?php if ($item['IsAvailable'] == 1): ?>
-                                            <span class="badge badge-active">Available</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-inactive">Disabled</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; gap: 8px;">
-                                            <button class="btn btn-outline btn-small" style="color: #3b82f6; border-color: #bfdbfe;" onclick="editItem(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                                        <div class="flex-row-gap">
+                                            <button class="btn btn-outline btn-small btn-edit" onclick="editItem(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
                                             
-                                            <form method="POST" style="display:inline;">
+                                            <form method="POST" class="inline-block">
                                                 <input type="hidden" name="action" value="toggle_status">
                                                 <input type="hidden" name="ItemID" value="<?= $item['ItemID'] ?>">
                                                 <input type="hidden" name="status" value="<?= $item['IsAvailable'] == 1 ? 0 : 1 ?>">
-                                                <button type="submit" class="btn btn-outline btn-small" style="color: <?= $item['IsAvailable'] == 1 ? '#ef4444' : '#10b981' ?>; border-color: #e2e8f0;">
+                                                <button type="submit" class="btn btn-outline btn-small <?= $item['IsAvailable'] == 1 ? 'btn-toggle-off' : 'btn-toggle-on' ?>">
                                                     <?= $item['IsAvailable'] == 1 ? 'Disable' : 'Enable' ?>
                                                 </button>
                                             </form>
@@ -227,7 +194,7 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($menuItems)): ?>
-                                <tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No menu items found.</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted p-20">No menu items found.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -237,19 +204,19 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal-overlay" style="display: none;">
+    <div id="editModal" class="modal-overlay hidden">
         <div class="modal">
-            <button class="modal-close" onclick="document.getElementById('editModal').style.display='none'">&times;</button>
+            <button class="modal-close" onclick="document.getElementById('editModal').classList.add('hidden')">&times;</button>
             <h3>Edit Menu Item</h3>
-            <form method="POST" style="margin-top: 20px;">
+            <form method="POST" class="mt-20">
                 <input type="hidden" name="action" value="edit_item">
                 <input type="hidden" name="ItemID" id="edit_ItemID">
                 
-                <div class="form-group-inline" style="margin-bottom: 15px;">
+                <div class="form-group-inline mb-15">
                     <label>Item Name</label>
                     <input type="text" name="ItemName" id="edit_ItemName" required class="form-input">
                 </div>
-                <div class="form-group-inline" style="margin-bottom: 15px;">
+                <div class="form-group-inline mb-15">
                     <label>Category</label>
                     <select name="CategoryID" id="edit_CategoryID" required class="form-input">
                         <?php foreach ($categories as $cat): ?>
@@ -257,18 +224,18 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group-inline" style="margin-bottom: 15px;">
+                <div class="form-group-inline mb-15">
                     <label>Price (₱)</label>
                     <input type="number" step="0.01" min="0" name="Price" id="edit_Price" required class="form-input">
                 </div>
-                <div class="form-group-inline" style="margin-bottom: 20px;">
+                <div class="form-group-inline mb-20">
                     <label>Status</label>
                     <select name="IsAvailable" id="edit_IsAvailable" class="form-input">
                         <option value="1">Available</option>
                         <option value="0">Disabled</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-clock-in" style="width: 100%;">Save Changes</button>
+                <button type="submit" class="btn btn-clock-in btn-full-width">Save Changes</button>
             </form>
         </div>
     </div>
@@ -280,25 +247,26 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
             document.getElementById('edit_CategoryID').value = item.CategoryID;
             document.getElementById('edit_Price').value = item.Price;
             document.getElementById('edit_IsAvailable').value = item.IsAvailable;
+            document.getElementById('editModal').classList.remove('hidden');
             document.getElementById('editModal').style.display = 'flex';
         }
     </script>
 
     <!-- Quick Clock Modal -->
-    <div id="quickClockModal" class="modal-overlay" style="display: none;">
+    <div id="quickClockModal" class="modal-overlay hidden">
         <div class="modal">
             <button class="modal-close" id="btnCloseModal">&times;</button>
             <h3>Quick Clock In / Out</h3>
-            <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 20px;">Enter your Staff ID and Password.</p>
-            <div id="quickClockRes" style="display: none; padding: 10px; margin-bottom: 15px; border-radius: 8px;"></div>
+            <p class="text-muted-sm mb-20">Enter your Staff ID and Password.</p>
+            <div id="quickClockRes" class="hidden alert-box mb-15"></div>
             
             <form id="frmQuickClock">
                 <input type="text" id="qc_login_id" placeholder="Staff ID or Username" required class="form-input">
                 <input type="password" id="qc_password" placeholder="Password" required class="form-input">
                 
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-clock-in" onclick="submitQuickClock('in')" style="flex: 1;">Clock In</button>
-                    <button type="button" class="btn btn-clock-out" onclick="submitQuickClock('out')" style="flex: 1;">Clock Out</button>
+                <div class="flex-row-gap mt-20">
+                    <button type="button" class="btn btn-clock-in flex-1" onclick="submitQuickClock('in')">Clock In</button>
+                    <button type="button" class="btn btn-clock-out flex-1" onclick="submitQuickClock('out')">Clock Out</button>
                 </div>
             </form>
         </div>
@@ -331,12 +299,13 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
         const btnClose = document.getElementById('btnCloseModal');
 
         btnOpen.addEventListener('click', () => {
+            modal.classList.remove('hidden');
             modal.style.display = 'flex';
             document.getElementById('qc_login_id').focus();
         });
         btnClose.addEventListener('click', () => {
-            modal.style.display = 'none';
-            document.getElementById('quickClockRes').style.display = 'none';
+            modal.classList.add('hidden');
+            document.getElementById('quickClockRes').classList.add('hidden');
             document.getElementById('frmQuickClock').reset();
         });
 
@@ -346,9 +315,9 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
             const resDiv = document.getElementById('quickClockRes');
 
             if (!login_id || !password) {
+                resDiv.classList.remove('hidden');
                 resDiv.style.display = 'block';
-                resDiv.style.backgroundColor = '#fee2e2';
-                resDiv.style.color = '#991b1b';
+                resDiv.className = 'alert-box alert-error';
                 resDiv.innerText = 'Please enter both ID and Password.';
                 return;
             }
@@ -365,23 +334,22 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                 });
                 const data = await response.json();
 
+                resDiv.classList.remove('hidden');
                 resDiv.style.display = 'block';
                 if (data.ok) {
-                    resDiv.style.backgroundColor = '#dcfce7';
-                    resDiv.style.color = '#166534';
+                    resDiv.className = 'alert-box alert-success mb-15';
                     resDiv.innerText = data.msg;
                     setTimeout(() => {
                         btnClose.click();
                     }, 2500);
                 } else {
-                    resDiv.style.backgroundColor = '#fee2e2';
-                    resDiv.style.color = '#991b1b';
+                    resDiv.className = 'alert-box alert-error mb-15';
                     resDiv.innerText = data.msg;
                 }
             } catch (err) {
+                resDiv.classList.remove('hidden');
                 resDiv.style.display = 'block';
-                resDiv.style.backgroundColor = '#fee2e2';
-                resDiv.style.color = '#991b1b';
+                resDiv.className = 'alert-box alert-error mb-15';
                 resDiv.innerText = 'Network Error. Please try again.';
             }
         }

@@ -94,3 +94,40 @@ td { color: #334155; }
 .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
 
 .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+/* Extracted Tab Styles */
+.tab-link { text-decoration: none; color: #64748b; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: background 0.2s; }
+.tab-link:hover { background: #f1f5f9; }
+.active-tab { background: #e2e8f0; color: #0f172a; }
+
+/* Extracted Inline Styles */
+.subtitle { color: #64748b; margin-top: 8px; }
+.header-actions { display: flex; gap: 10px; align-items: center; }
+.btn-refresh { background: white; border: 1px solid #cbd5e1; color: #334155; }
+.tabs-container { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+
+.alert-base { padding: 12px; margin-bottom: 24px; border-radius: 8px; font-weight: 500; font-size: 0.875rem; }
+.alert-error { background: #fee2e2; color: #b91c1c; }
+.alert-success { background: #dcfce7; color: #166534; }
+
+.status-active { color: #10b981; font-weight: 500; }
+.status-deactivated { color: #ef4444; font-weight: 500; }
+.status-pending { color: #f59e0b; }
+
+.inline-form { display: inline; }
+.btn-success { background: #10b981; color: white; }
+.btn-success:hover { background: #059669; }
+
+.table-empty { text-align: center; padding: 24px; }
+
+.settings-card { background: white; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; max-width: 600px; }
+.card-title { font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-bottom: 16px; }
+.form-label-bold { display: block; margin-bottom: 6px; font-weight: 500; }
+.input-full { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+.separator { margin: 24px 0; border: none; border-top: 1px solid #e2e8f0; }
+.text-sm-bold { font-size: 0.9rem; margin-bottom: 12px; font-weight: 500; }
+.text-danger-bold { font-size: 0.9rem; margin-bottom: 12px; color: #ef4444; font-weight: 500; }
+.btn-full-mt { margin-top: 16px; width: 100%; }
+
+.flex-row-gap { display: flex; gap: 16px; }
+.flex-1 { flex: 1; }

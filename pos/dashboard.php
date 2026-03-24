@@ -43,29 +43,7 @@ $recentOrders = $pdo->query("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Fisher's Pond</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        body { margin: 0; font-family: 'Inter', sans-serif; background: #f8fafc; color: #334155; }
-        .page-wrapper { display: flex; height: 100vh; overflow: hidden; }
-        .page-content { flex: 1; padding: 40px; overflow-y: auto; }
-        h1 { margin-top: 0; color: #0f172a; margin-bottom: 30px; font-size: 1.8rem; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .stat-card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .stat-card h3 { margin: 0 0 10px 0; color: #64748b; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .stat-card .value { font-size: 2rem; font-weight: 700; color: #0f172a; }
-        .stat-card.primary { border-top: 4px solid #3b82f6; }
-        .stat-card.success { border-top: 4px solid #10b981; }
-        
-        .table-container { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        h2 { margin-top: 0; margin-bottom: 20px; color: #0f172a; font-size: 1.25rem; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f8fafc; font-weight: 600; color: #475569; font-size: 0.9rem; }
-        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
-        .status-Completed { background: #dcfce7; color: #166534; }
-        .status-Voided { background: #fee2e2; color: #991b1b; }
-    </style>
+    <link rel="stylesheet" href="pos/style.css">
 </head>
 <body>
     <div class="page-wrapper">
@@ -78,7 +56,7 @@ $recentOrders = $pdo->query("
                 <a href="menu_manage.php">Menu Management</a>
             </nav>
             <div class="sidebar-footer">
-                <a href="../index.php" class="btn btn-logout" style="text-align: center; display: block; text-decoration: none;">Exit POS</a>
+                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
             </div>
         </aside>
 
@@ -107,7 +85,7 @@ $recentOrders = $pdo->query("
             <div class="table-container">
                 <h2>Recent Transactions</h2>
                 <?php if (empty($recentOrders)): ?>
-                    <p style="color: #64748b;">No recent orders found.</p>
+                    <p class="text-muted">No recent orders found.</p>
                 <?php else: ?>
                     <table>
                         <thead>
@@ -122,10 +100,10 @@ $recentOrders = $pdo->query("
                         <tbody>
                             <?php foreach ($recentOrders as $order): ?>
                             <tr>
-                                <td style="font-weight: 600;">#<?= str_pad($order['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
-                                <td style="color: #64748b;"><?= date('M j, Y h:i A', strtotime($order['OrderDate'])) ?></td>
+                                <td class="text-bold">#<?= str_pad($order['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
+                                <td class="text-muted"><?= date('M j, Y h:i A', strtotime($order['OrderDate'])) ?></td>
                                 <td><?= htmlspecialchars($order['FirstName'] ?? 'Admin') ?></td>
-                                <td style="font-weight: 700; color: #0f172a;">₱<?= number_format($order['GrandTotal'], 2) ?></td>
+                                <td class="item-total-bold">₱<?= number_format($order['GrandTotal'], 2) ?></td>
                                 <td><span class="status-badge status-<?= htmlspecialchars($order['Status']) ?>"><?= htmlspecialchars($order['Status']) ?></span></td>
                             </tr>
                             <?php endforeach; ?>

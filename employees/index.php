@@ -80,7 +80,7 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
     <meta charset="UTF-8">
     <title>Fisher's Pond Kiosk</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="employees/style.css">
 </head>
 <body>
     <div class="kiosk-container">
@@ -99,12 +99,12 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
                 <button type="submit" name="clock_action" value="out" class="btn btn-clock-out">CLOCK OUT</button>
             </form>
             <hr>
-            <h3 style="font-size:1.1rem; margin-bottom:16px;">Manage Account</h3>
+            <h3 class="text-lg mb-16">Manage Account</h3>
             <button onclick="window.location.href='?v=my_details'" class="btn btn-outline">Update Details & Password</button>
-            <div style="margin-bottom:8px;"></div>
+            <div class="mb-8"></div>
             <form method="POST">
                 <input type="hidden" name="action" value="logout">
-                <button type="submit" class="link-btn" style="color:#6b7280;">Log Out / Lock Kiosk</button>
+                <button type="submit" class="link-btn text-muted">Log Out / Lock Kiosk</button>
             </form>
 
         <?php elseif ($view === 'my_details'): 
@@ -116,26 +116,26 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
                 <div class="form-group">
                     <label>Username (Optional)</label><input type="text" name="Username" value="<?= htmlspecialchars($emp['Username'] ?? '') ?>">
                 </div>
-                <div style="display:flex; gap:12px;">
-                    <div class="form-group" style="flex:1;">
+                <div class="flex-row-gap-12">
+                    <div class="form-group flex-1">
                         <label>First Name</label><input type="text" name="FirstName" value="<?= htmlspecialchars($emp['FirstName']) ?>" required>
                     </div>
-                    <div class="form-group" style="flex:1;">
+                    <div class="form-group flex-1">
                         <label>Last Name</label><input type="text" name="LastName" value="<?= htmlspecialchars($emp['LastName']) ?>" required>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Birth Date</label><input type="date" name="BirthDate" value="<?= htmlspecialchars($emp['BirthDate']) ?>" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px;" required>
+                    <label>Birth Date</label><input type="date" name="BirthDate" value="<?= htmlspecialchars($emp['BirthDate']) ?>" class="w-full p-12 border-gray rounded-8" required>
                 </div>
                 <div class="form-group">
-                    <label>Email</label><input type="email" name="Email" value="<?= htmlspecialchars($emp['Email']) ?>" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px;" required>
+                    <label>Email</label><input type="email" name="Email" value="<?= htmlspecialchars($emp['Email']) ?>" class="w-full p-12 border-gray rounded-8" required>
                 </div>
                 <div class="form-group">
-                    <label>Contact Number</label><input type="tel" name="ContactNumber" value="<?= htmlspecialchars($emp['ContactNumber']) ?>" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px;" required>
+                    <label>Contact Number</label><input type="tel" name="ContactNumber" value="<?= htmlspecialchars($emp['ContactNumber']) ?>" class="w-full p-12 border-gray rounded-8" required>
                 </div>
                 
-                <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;">
-                <p class="subtitle" style="font-size:0.9rem; margin-bottom:12px;">Change Password (Optional)</p>
+                <hr class="hr-fancy">
+                <p class="subtitle text-sm mb-12">Change Password (Optional)</p>
                 <div class="form-group">
                     <input type="password" name="new_password" placeholder="New Password">
                 </div>
@@ -143,8 +143,8 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
                     <input type="password" name="confirm_password" placeholder="Confirm New Password">
                 </div>
                 
-                <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;">
-                <p class="subtitle" style="font-size:0.9rem; margin-bottom:12px; color:#ef4444;">Current Password required to save</p>
+                <hr class="hr-fancy">
+                <p class="subtitle text-sm mb-12 text-danger">Current Password required to save</p>
                 <div class="form-group">
                     <input type="password" name="current_password" placeholder="Current Password" required>
                 </div>
@@ -155,23 +155,23 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
 
         <?php elseif ($view === 'activate'): ?>
             <p class="subtitle">Account Activation</p>
-            <p style="font-size:0.875rem; color:#6b7280; text-align:center; margin-bottom:16px;">Enter the Staff ID and Email created by your Administrator</p>
+            <p class="text-sm text-muted text-center mb-16">Enter the Staff ID and Email created by your Administrator</p>
             <form method="POST">
                 <input type="hidden" name="action" value="activate">
                 <div class="form-group">
-                    <input type="number" name="staffID" placeholder="Staff ID Number" required style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <input type="number" name="staffID" placeholder="Staff ID Number" required class="w-full p-12 border-gray rounded-8 font-1rem">
                 </div>
                 <div class="form-group">
-                    <input type="email" name="email" placeholder="Registered Email Address" required style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <input type="email" name="email" placeholder="Registered Email Address" required class="w-full p-12 border-gray rounded-8 font-1rem">
                 </div>
-                <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;">
+                <hr class="hr-fancy">
                 <div class="form-group">
-                    <input type="password" name="password" placeholder="Create Password" required style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <input type="password" name="password" placeholder="Create Password" required class="w-full p-12 border-gray rounded-8 font-1rem">
                 </div>
                 <div class="form-group">
-                    <input type="password" name="confirm_password" placeholder="Confirm Password" required style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <input type="password" name="confirm_password" placeholder="Confirm Password" required class="w-full p-12 border-gray rounded-8 font-1rem">
                 </div>
-                <button type="submit" class="btn btn-clock-in" style="margin-top:8px;">Activate Account</button>
+                <button type="submit" class="btn btn-clock-in mt-8">Activate Account</button>
             </form>
             <button onclick="window.location.href='../index.php'" class="link-btn">← Back to Login</button>
 

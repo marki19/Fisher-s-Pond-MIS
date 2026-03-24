@@ -29,7 +29,7 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
     <meta charset="UTF-8">
     <title>POS | Fisher's Pond</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="pos/style.css">
 </head>
 <body>
     <div class="pos-layout">
@@ -45,8 +45,8 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                 <?php endif; ?>
             </nav>
             <div class="sidebar-footer">
-                <button id="btnQuickClock" class="btn btn-outline" style="width: 100%; margin-bottom: 10px;">Quick Clock In/Out</button>
-                <a href="../index.php" class="btn btn-logout" style="text-align: center; display: block; text-decoration: none;">Exit POS</a>
+                <button id="btnQuickClock" class="btn btn-outline btn-full-width mb-10">Quick Clock In/Out</button>
+                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
             </div>
         </aside>
 
@@ -83,13 +83,13 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                                 <div class="item-name"><?= htmlspecialchars($item['ItemName']) ?></div>
                                 <div class="item-price">₱<?= number_format($item['Price'], 2) ?></div>
                                 <?php if (!$item['IsAvailable']): ?>
-                                    <div style="color:#ef4444; font-size:0.75rem; font-weight:600; margin-top:4px;">Not Available</div>
+                                    <div class="text-danger-sm-bold mt-4">Not Available</div>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                         
                         <?php if (empty($menuItems)): ?>
-                            <div style="grid-column: 1 / -1; color: #94a3b8; text-align: center; padding: 40px;">No menu items configured yet.</div>
+                            <div class="empty-msg-grid">No menu items configured yet.</div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -116,16 +116,16 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
         <div class="modal">
             <button class="modal-close" id="btnCloseModal">&times;</button>
             <h3>Quick Clock In / Out</h3>
-            <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 20px;">Enter your Staff ID and Password.</p>
+            <p class="text-muted-sm mb-20">Enter your Staff ID and Password.</p>
             <div id="quickClockRes" style="display: none; padding: 10px; margin-bottom: 15px; border-radius: 8px;"></div>
             
             <form id="frmQuickClock">
                 <input type="text" id="qc_login_id" placeholder="Staff ID or Username" required class="form-input">
                 <input type="password" id="qc_password" placeholder="Password" required class="form-input">
                 
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-clock-in" onclick="submitQuickClock('in')" style="flex: 1;">Clock In</button>
-                    <button type="button" class="btn btn-clock-out" onclick="submitQuickClock('out')" style="flex: 1;">Clock Out</button>
+                <div class="flex-row-gap mt-20">
+                    <button type="button" class="btn btn-clock-in flex-1" onclick="submitQuickClock('in')">Clock In</button>
+                    <button type="button" class="btn btn-clock-out flex-1" onclick="submitQuickClock('out')">Clock Out</button>
                 </div>
             </form>
         </div>
@@ -217,19 +217,19 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                 subtotal += itemTotal;
                 
                 const div = document.createElement('div');
-                div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #e2e8f0;';
+                div.className = 'cart-item';
                 div.innerHTML = `
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: #1e293b; font-size: 0.95rem;">${item.name}</div>
-                        <div style="color: #64748b; font-size: 0.85rem;">₱${item.price.toFixed(2)} x ${item.qty}</div>
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.name}</div>
+                        <div class="cart-item-price">₱${item.price.toFixed(2)} x ${item.qty}</div>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                        <div style="font-weight: 700; color: #0f172a;">₱${itemTotal.toFixed(2)}</div>
-                        <div style="display: flex; gap: 5px;">
-                            <button onclick="updateQty(${item.id}, -1)" style="padding: 2px 8px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer;">-</button>
-                            <span style="font-size: 0.9rem; font-weight: 500; min-width: 15px; text-align: center;">${item.qty}</span>
-                            <button onclick="updateQty(${item.id}, 1)" style="padding: 2px 8px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer;">+</button>
-                            <button onclick="removeFromCart(${item.id})" style="padding: 2px 6px; border: none; background: #fee2e2; color: #991b1b; border-radius: 4px; cursor: pointer; margin-left: 5px;">x</button>
+                    <div class="flex-col-end">
+                        <div class="cart-item-total">₱${itemTotal.toFixed(2)}</div>
+                        <div class="qty-controls">
+                            <button onclick="updateQty(${item.id}, -1)" class="qty-btn">-</button>
+                            <span class="qty-val">${item.qty}</span>
+                            <button onclick="updateQty(${item.id}, 1)" class="qty-btn">+</button>
+                            <button onclick="removeFromCart(${item.id})" class="remove-btn">x</button>
                         </div>
                     </div>
                 `;
@@ -308,8 +308,7 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
 
             if (!login_id || !password) {
                 resDiv.style.display = 'block';
-                resDiv.style.backgroundColor = '#fee2e2';
-                resDiv.style.color = '#991b1b';
+                resDiv.className = 'alert-box alert-error';
                 resDiv.innerText = 'Please enter both ID and Password.';
                 return;
             }
@@ -328,21 +327,21 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
 
                 resDiv.style.display = 'block';
                 if (data.ok) {
-                    resDiv.style.backgroundColor = '#dcfce7';
-                    resDiv.style.color = '#166534';
+                    resDiv.className = 'alert-box alert-success';
                     resDiv.innerText = data.msg;
                     setTimeout(() => {
                         btnClose.click();
+                        if (actionType === 'out' && data.is_self) {
+                            window.location.href = '../index.php';
+                        }
                     }, 2500);
                 } else {
-                    resDiv.style.backgroundColor = '#fee2e2';
-                    resDiv.style.color = '#991b1b';
+                    resDiv.className = 'alert-box alert-error';
                     resDiv.innerText = data.msg;
                 }
             } catch (err) {
                 resDiv.style.display = 'block';
-                resDiv.style.backgroundColor = '#fee2e2';
-                resDiv.style.color = '#991b1b';
+                resDiv.className = 'alert-box alert-error';
                 resDiv.innerText = 'Network Error. Please try again.';
             }
         }

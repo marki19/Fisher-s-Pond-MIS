@@ -42,15 +42,24 @@ if (!password_verify($password, $employee['PasswordHash'])) {
 $staffID = $employee['staffID'];
 $name = $employee['FirstName'];
 
-// Rely on existing functions from employees/data.php
+$is_self = false;
+if (isset($_SESSION['active_staffID']) && $_SESSION['active_staffID'] == $staffID) {
+    $is_self = true;
+}
+
 if ($action === 'in') {
     $msg = clockIn($pdo, $staffID);
     $ok = strpos($msg, '⚠️') === false; // Usually it returns warning emoji if failed
-    echo json_encode(['ok' => $ok, 'msg' => $name . ': ' . $msg]);
+    echo json_encode(['ok' => $ok, 'msg' => $name . ': ' . $msg, 'is_self' => $is_self]);
 } elseif ($action === 'out') {
     $msg = clockOut($pdo, $staffID);
     $ok = strpos($msg, '⚠️') === false;
-    echo json_encode(['ok' => $ok, 'msg' => $name . ': ' . $msg]);
+
+    if ($ok && $is_self) {
+        unset($_SESSION['active_staffID'], $_SESSION['active_name'], $_SESSION['position_id']);
+    }
+
+    echo json_encode(['ok' => $ok, 'msg' => $name . ': ' . $msg, 'is_self' => $is_self]);
 } else {
     echo json_encode(['ok' => false, 'msg' => 'Invalid clock action.']);
 }

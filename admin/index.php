@@ -34,20 +34,18 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 <head>
     <meta charset="UTF-8">
     <title>Admin Panel</title>
+    <?php if ($tab === 'attendance'): ?>
+    <meta http-equiv="refresh" content="60">
+    <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .tab-link { text-decoration: none; color: #64748b; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: background 0.2s; }
-        .tab-link:hover { background: #f1f5f9; }
-        .active-tab { background: #e2e8f0; color: #0f172a; }
-    </style>
+    <link rel="stylesheet" href="admin/style.css">
 </head>
 <body>
     <div class="sidebar">
         <div class="sidebar-brand">Fisher's Pond</div>
         <div class="sidebar-nav">
             <a href="index.php" class="active">Employees</a>
-            <a href="../admin/adminLogOut.php" class="logout" style="color:#ef4444;">Log Out</a>
+            <a href="../admin/adminLogOut.php" class="logout danger-text">Log Out</a>
         </div>
     </div>
 
@@ -55,14 +53,18 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         <div class="header">
             <div>
                 <h1>Admin Dashboard</h1>
-                <p style="color:#64748b; margin-top:8px;">Manage your employee roster and attendance</p>
+                <p class="subtitle">Manage your employee roster and attendance</p>
             </div>
-            <?php if ($tab !== 'attendance'): ?>
-            <button class="btn btn-primary" onclick="openModal()">+ Add Employee</button>
-            <?php endif; ?>
+            <div class="header-actions">
+                <?php if ($tab === 'attendance'): ?>
+                <button class="btn btn-secondary btn-refresh" onclick="window.location.reload()">Refresh Data</button>
+                <?php else: ?>
+                <button class="btn btn-primary" onclick="openModal()">+ Add Employee</button>
+                <?php endif; ?>
+            </div>
         </div>
         
-        <div class="tabs" style="display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+        <div class="tabs-container">
             <a href="?tab=active" class="tab-link <?= $tab === 'active' ? 'active-tab' : '' ?>">Active Employees</a>
             <a href="?tab=deactivated" class="tab-link <?= $tab === 'deactivated' ? 'active-tab' : '' ?>">Deactivated Employees</a>
             <a href="?tab=attendance" class="tab-link <?= $tab === 'attendance' ? 'active-tab' : '' ?>">Attendance Records</a>
@@ -70,7 +72,7 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         </div>
         
         <?php if (!empty($msg)): ?>
-            <div style="padding: 12px; margin-bottom: 24px; border-radius: 8px; font-weight: 500; font-size: 0.875rem; <?php echo $msgType === 'error' ? 'background:#fee2e2; color:#b91c1c;' : 'background:#dcfce7; color:#166534;'; ?>">
+            <div class="alert-base <?php echo $msgType === 'error' ? 'alert-error' : 'alert-success'; ?>">
                 <?= htmlspecialchars($msg) ?>
             </div>
         <?php endif; ?>
@@ -98,9 +100,9 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                     <td><?= htmlspecialchars($emp['Email']) ?></td>
                     <td>
                         <?php if ($isActive): ?>
-                            <span style="color:#10b981; font-weight:500;">Active</span>
+                            <span class="status-active">Active</span>
                         <?php else: ?>
-                            <span style="color:#ef4444; font-weight:500;">Deactivated</span>
+                            <span class="status-deactivated">Deactivated</span>
                         <?php endif; ?>
                     </td>
                     <td>
@@ -116,23 +118,23 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                         )">Edit</button>
                         
                         <?php if ($isActive): ?>
-                        <form method="POST" action="action.php" style="display:inline;" onsubmit="return confirm('Deactivate this employee?');">
+                        <form method="POST" action="action.php" class="inline-form" onsubmit="return confirm('Deactivate this employee?');">
                             <input type="hidden" name="action" value="deactivate">
                             <input type="hidden" name="delete_staffID" value="<?= htmlspecialchars($emp['staffID']) ?>">
                             <button type="submit" class="btn btn-danger">Deactivate</button>
                         </form>
                         <?php else: ?>
-                        <form method="POST" action="action.php" style="display:inline;" onsubmit="return confirm('Reactivate this employee?');">
+                        <form method="POST" action="action.php" class="inline-form" onsubmit="return confirm('Reactivate this employee?');">
                             <input type="hidden" name="action" value="reactivate">
                             <input type="hidden" name="staffID" value="<?= htmlspecialchars($emp['staffID']) ?>">
-                            <button type="submit" class="btn btn-primary" style="background:#10b981;">Reactivate</button>
+                            <button type="submit" class="btn btn-primary btn-success">Reactivate</button>
                         </form>
                         <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($employees)): ?>
-                <tr><td colspan="6" style="text-align:center; padding: 24px;">No employees found in this category.</td></tr>
+                <tr><td colspan="6" class="table-empty">No employees found in this category.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -154,38 +156,38 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                     <td><?= htmlspecialchars($att['FirstName'] . ' ' . $att['LastName']) ?></td>
                     <td><?= htmlspecialchars($att['ShiftDate']) ?></td>
                     <td><?= htmlspecialchars(date('h:i A', strtotime($att['ClockIn']))) ?></td>
-                    <td><?= $att['ClockOut'] ? htmlspecialchars(date('h:i A', strtotime($att['ClockOut']))) : '<span style="color:#f59e0b;">Active Shift</span>' ?></td>
+                    <td><?= $att['ClockOut'] ? htmlspecialchars(date('h:i A', strtotime($att['ClockOut']))) : '<span class="status-pending">Active Shift</span>' ?></td>
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($attendance)): ?>
-                <tr><td colspan="5" style="text-align:center; padding: 24px;">No attendance records found.</td></tr>
+                <tr><td colspan="5" class="table-empty">No attendance records found.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
         
         <?php elseif ($tab === 'settings'): ?>
-        <div style="background: white; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; max-width: 600px;">
-            <h2 style="font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-bottom: 16px;">Admin Account Settings</h2>
+        <div class="settings-card">
+            <h2 class="card-title">Admin Account Settings</h2>
             <form method="POST" action="action.php">
                 <input type="hidden" name="action" value="update_admin_account">
                 <div class="form-group">
-                    <label style="display:block; margin-bottom:6px; font-weight:500;">Username</label>
-                    <input type="text" name="new_username" value="<?= htmlspecialchars($_SESSION['admin_username']) ?>" required style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <label class="form-label-bold">Username</label>
+                    <input type="text" name="new_username" value="<?= htmlspecialchars($_SESSION['admin_username']) ?>" required class="input-full">
                 </div>
-                <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;">
-                <p style="font-size:0.9rem; margin-bottom:12px; font-weight:500;">Change Password (Optional)</p>
+                <div class="separator"></div>
+                <p class="text-sm-bold">Change Password (Optional)</p>
                 <div class="form-group">
-                    <input type="password" name="new_password" placeholder="New Password" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem; margin-bottom:12px;">
+                    <input type="password" name="new_password" placeholder="New Password" class="input-full-mb">
                 </div>
                 <div class="form-group">
-                    <input type="password" name="confirm_password" placeholder="Confirm New Password" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <input type="password" name="confirm_password" placeholder="Confirm New Password" class="input-full">
                 </div>
-                <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;">
-                <p style="font-size:0.9rem; margin-bottom:12px; color:#ef4444; font-weight:500;">Current Password required to save changes</p>
+                <div class="separator"></div>
+                <p class="text-danger-bold">Current Password required to save changes</p>
                 <div class="form-group">
-                    <input type="password" name="current_password" placeholder="Current Password" required style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:1rem;">
+                    <input type="password" name="current_password" placeholder="Current Password" required class="input-full">
                 </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 16px; width:100%;">Save Settings</button>
+                <button type="submit" class="btn btn-primary btn-full-mt">Save Settings</button>
             </form>
         </div>
         
@@ -205,12 +207,12 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                     <input type="text" name="Username" id="empUsername">
                 </div>
                 
-                <div style="display:flex; gap:16px;">
-                    <div class="form-group" style="flex:1;">
+                <div class="flex-row-gap">
+                    <div class="form-group flex-1">
                         <label>First Name</label>
                         <input type="text" name="FirstName" id="empFirstName" required>
                     </div>
-                    <div class="form-group" style="flex:1;">
+                    <div class="form-group flex-1">
                         <label>Last Name</label>
                         <input type="text" name="LastName" id="empLastName" required>
                     </div>

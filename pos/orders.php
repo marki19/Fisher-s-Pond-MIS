@@ -33,29 +33,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders History - Fisher's Pond</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        body { margin: 0; font-family: 'Inter', sans-serif; background: #f8fafc; color: #334155; }
-        .page-wrapper { display: flex; height: 100vh; overflow: hidden; }
-        .page-content { flex: 1; padding: 40px; overflow-y: auto; }
-        h1 { margin-top: 0; color: #0f172a; margin-bottom: 30px; font-size: 1.8rem; }
-        
-        .table-container { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 14px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f8fafc; font-weight: 600; color: #475569; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        tr:hover td { background: #f1f5f9; cursor: pointer; }
-        
-        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
-        .status-Completed { background: #dcfce7; color: #166534; }
-        .status-Voided { background: #fee2e2; color: #991b1b; }
-        
-        /* Receipt Modal */
-        .receipt-body { font-family: monospace; font-size: 14px; background: #fff; padding: 20px; border: 1px dashed #cbd5e1; }
-        .receipt-header { text-align: center; border-bottom: 1px dashed #94a3b8; padding-bottom: 10px; margin-bottom: 10px; }
-        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .receipt-totals { border-top: 1px dashed #94a3b8; padding-top: 10px; margin-top: 10px; }
-    </style>
+    <link rel="stylesheet" href="pos/style.css">
 </head>
 <body>
     <div class="page-wrapper">
@@ -70,7 +48,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
             </nav>
             <div class="sidebar-footer">
-                <a href="../index.php" class="btn btn-logout" style="text-align: center; display: block; text-decoration: none;">Exit POS</a>
+                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
             </div>
         </aside>
 
@@ -79,7 +57,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <div class="table-container">
                 <?php if (empty($orders)): ?>
-                    <p style="color: #64748b; text-align: center; padding: 20px;">No actual orders found yet.</p>
+                    <p class="text-muted text-center p-20">No actual orders found yet.</p>
                 <?php else: ?>
                     <table>
                         <thead>
@@ -94,13 +72,13 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </thead>
                         <tbody>
                             <?php foreach ($orders as $o): ?>
-                            <tr onclick="openReceipt(<?= $o['OrderID'] ?>)">
-                                <td style="font-weight: 600;">#<?= str_pad($o['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
-                                <td style="color: #64748b;"><?= date('M j, Y h:i A', strtotime($o['OrderDate'])) ?></td>
+                            <tr class="row-hover" onclick="openReceipt(<?= $o['OrderID'] ?>)">
+                                <td class="text-bold">#<?= str_pad($o['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
+                                <td class="text-muted"><?= date('M j, Y h:i A', strtotime($o['OrderDate'])) ?></td>
                                 <td><?= htmlspecialchars($o['FirstName'] . ' ' . $o['LastName']) ?></td>
-                                <td style="font-weight: 700; color: #0f172a;">₱<?= number_format($o['GrandTotal'], 2) ?></td>
+                                <td class="item-total-bold">₱<?= number_format($o['GrandTotal'], 2) ?></td>
                                 <td><span class="status-badge status-<?= htmlspecialchars($o['Status']) ?>"><?= htmlspecialchars($o['Status']) ?></span></td>
-                                <td><button class="btn" style="padding: 6px 14px; font-size: 0.8rem; background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px;">View Receipt</button></td>
+                                <td><button class="btn btn-receipt-view">View Receipt</button></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -111,10 +89,10 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <!-- Receipt Modal -->
-    <div id="receiptModal" class="modal-overlay" style="display: none;">
-        <div class="modal" style="max-width: 450px;">
+    <div id="receiptModal" class="modal-overlay hidden">
+        <div class="modal modal-receipt">
             <button class="modal-close" id="btnCloseModal">&times;</button>
-            <h3 style="margin-top:0;">Order Receipt #<span id="r_orderId"></span></h3>
+            <h3 class="mt-0">Order Receipt #<span id="r_orderId"></span></h3>
             
             <div class="receipt-body" id="receiptContent">
                 <div class="receipt-header">
@@ -127,14 +105,14 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="receipt-totals">
                     <div class="receipt-item"><span>Subtotal</span><span id="r_subtotal"></span></div>
                     <div class="receipt-item"><span>Tax (12%)</span><span id="r_tax"></span></div>
-                    <div class="receipt-item" style="font-weight: bold; font-size: 16px; margin-top: 5px;"><span>GRAND TOTAL</span><span id="r_total"></span></div>
+                    <div class="receipt-item receipt-total-bold"><span>GRAND TOTAL</span><span id="r_total"></span></div>
                 </div>
             </div>
 
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn btn-clock-in" style="flex: 1;" onclick="window.print()">Print Receipt</button>
+            <div class="flex-row-gap mt-20">
+                <button class="btn btn-clock-in flex-1" onclick="window.print()">Print Receipt</button>
                 <?php if ($isAdmin || $isManager): ?>
-                <button class="btn btn-clock-out" style="flex: 1;" id="btnVoid" onclick="voidOrder()">Void Transaction</button>
+                <button class="btn btn-clock-out flex-1" id="btnVoid" onclick="voidOrder()">Void Transaction</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -144,7 +122,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         let currentOpenOrderId = null;
 
         document.getElementById('btnCloseModal').addEventListener('click', () => {
-            document.getElementById('receiptModal').style.display = 'none';
+            document.getElementById('receiptModal').classList.add('hidden');
         });
 
         async function openReceipt(orderId) {
@@ -177,7 +155,8 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         btnVoid.style.display = o.Status === 'Voided' ? 'none' : 'block';
                     }
 
-                    document.getElementById('receiptModal').style.display = 'flex';
+                    document.getElementById('receiptModal').classList.remove('hidden');
+                    document.getElementById('receiptModal').style.display = 'flex'; // Keep flex for overlaying centring
                 } else {
                     alert(data.msg);
                 }

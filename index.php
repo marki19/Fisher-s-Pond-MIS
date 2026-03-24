@@ -46,44 +46,9 @@ unset($_SESSION['logout_msg']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fisher's Pond — Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            margin: 0; padding: 0; min-height: 100vh;
-            background-color: #f1f5f9;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .login-card {
-            background: white; padding: 48px; border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 24px 38px 3px rgba(0,0,0,0.05);
-            width: 100%; max-width: 400px; text-align: center;
-        }
-        .login-card h1 { font-size: 1.875rem; color: #0f172a; margin-bottom: 8px; font-weight: 700; }
-        .login-subtitle { color: #64748b; margin-bottom: 32px; font-size: 0.875rem; letter-spacing: 0.05em; text-transform: uppercase; }
-        
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-group input {
-            width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1;
-            border-radius: 8px; outline: none; transition: all 0.2s;
-            font-size: 1rem; color: #334155; box-sizing: border-box;
-        }
-        .form-group input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        
-        .submit-btn {
-            width: 100%; padding: 14px; background: #0f172a; color: white;
-            border: none; border-radius: 8px; font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: background 0.2s; margin-top: 8px;
-        }
-        .submit-btn:hover { background: #1e293b; }
-        
-        .msg-error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 24px; font-weight: 500; font-size: 0.875rem; }
-        
-        .staff-links { margin-top: 32px; display: flex; flex-direction: column; gap: 12px; }
-        .staff-links a { color: #3b82f6; text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: color 0.2s; }
-        .staff-links a:hover { color: #2563eb; text-decoration: underline; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="login-body">
     <div class="login-card">
         <h1>Fisher's Pond</h1>
         <p class="login-subtitle">System Login</p>
@@ -93,23 +58,23 @@ unset($_SESSION['logout_msg']);
         <?php endif; ?>
         
         <?php if ($logoutMsg): ?>
-            <div style="background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 24px; font-weight: 500; font-size: 0.875rem;">
+            <div class="msg-success">
                 <?= htmlspecialchars($logoutMsg) ?>
             </div>
         <?php endif; ?>
 
         <form method="POST" action="authAction.php">
-            <div class="form-group">
+            <div class="login-form-group">
                 <input type="text" name="login_id" placeholder="Username or Staff ID" required autofocus>
             </div>
-            <div class="form-group">
+            <div class="login-form-group">
                 <input type="password" name="password" placeholder="Password" required>
             </div>
             <button type="submit" class="submit-btn">Log In</button>
         </form>
         
-        <div style="margin-top: 24px; text-align: center;">
-            <a href="employees/index.php?v=activate" style="color: #6366f1; text-decoration: none; font-weight: 500; font-size: 0.875rem;">First time logging in? Activate your account</a>
+        <div class="mt-24 text-center">
+            <a href="employees/index.php?v=activate" class="link-primary">First time logging in? Activate your account</a>
         </div>
     </div>
 </body>
