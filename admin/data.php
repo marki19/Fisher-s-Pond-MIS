@@ -31,7 +31,11 @@ function getPositions(PDO $pdo): array {
 }
 
 function addEmployee(PDO $pdo, array $d): void {
-    $username = trim($d['Username'] ?? '') === '' ? null : trim($d['Username']);
+    $username = trim($d['Username'] ?? '');
+    if ($username === '') {
+        $cleanName = preg_replace('/[^a-zA-Z]/', '', $d['FirstName']);
+        $username = strtolower($cleanName) . rand(100, 999);
+    }
     $sql = "INSERT INTO employee (FirstName, LastName, BirthDate, Email, ContactNumber, PositionID, Username)
             VALUES (:fn, :ln, :bd, :em, :cn, :pid, :un)";
     $pdo->prepare($sql)->execute([
@@ -46,7 +50,11 @@ function addEmployee(PDO $pdo, array $d): void {
 }
 
 function updateEmployee(PDO $pdo, array $d): void {
-    $username = trim($d['Username'] ?? '') === '' ? null : trim($d['Username']);
+    $username = trim($d['Username'] ?? '');
+    if ($username === '') {
+        $cleanName = preg_replace('/[^a-zA-Z]/', '', $d['FirstName']);
+        $username = strtolower($cleanName) . rand(100, 999);
+    }
     $sql = "UPDATE employee
             SET FirstName=:fn, LastName=:ln, BirthDate=:bd,
                 Email=:em, ContactNumber=:cn, PositionID=:pid, Username=:un

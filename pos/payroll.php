@@ -11,121 +11,102 @@ $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] =
 $isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'SuperAdmin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
 
-if (!$isAdmin && !$isManager) {
+// Only SuperAdmins and Managers can access Payroll
+if (!$isSuperAdmin && !$isManager) {
     if (isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3) {
-        header("Location: index.php"); // Cashiers go back to POS
+        header("Location: index.php");
+    } elseif ($isAdmin) {
+        header("Location: ../admin/index.php");
     } else {
         header("Location: ../employees/index.php");
     }
     exit;
 }
 
-// Queries logic with dropdown filter
-$filter = $_GET['filter'] ?? 'Today';
-$today = date('Y-m-d');
-$startDate = $today;
-$endDate = $today;
+$activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSION['active_name'];
+$roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
 
-if ($filter === 'Weekly') {
-    $startDate = date('Y-m-d', strtotime('-7 days'));
-} elseif ($filter === 'Monthly') {
-    $startDate = date('Y-m-01');
-} elseif ($filter === 'Bi-Monthly') {
-    $startDate = date('Y-m-d', strtotime('-2 months'));
-} elseif ($filter === 'Annual') {
-    $startDate = date('Y-m-d', strtotime('-1 year'));
-}
-
-$revTotalStmt = $pdo->prepare("SELECT SUM(GrandTotal) FROM orders WHERE DATE(OrderDate) >= ? AND DATE(OrderDate) <= ? AND Status != 'Voided'");
-$revTotalStmt->execute([$startDate, $endDate]);
-$revTotal = $revTotalStmt->fetchColumn() ?: 0;
-
-$ordersTotalStmt = $pdo->prepare("SELECT COUNT(OrderID) FROM orders WHERE DATE(OrderDate) >= ? AND DATE(OrderDate) <= ? AND Status != 'Voided'");
-$ordersTotalStmt->execute([$startDate, $endDate]);
-$totalOrders = $ordersTotalStmt->fetchColumn() ?: 0;
-
-$recentOrdersStmt = $pdo->prepare("
-    SELECT o.OrderID, o.GrandTotal, o.OrderDate, e.FirstName, o.Status 
-    FROM orders o 
-    LEFT JOIN employee e ON o.StaffID = e.staffID 
-    WHERE DATE(o.OrderDate) >= ? AND DATE(o.OrderDate) <= ?
-    ORDER BY o.OrderID DESC LIMIT 15
-");
-$recentOrdersStmt->execute([$startDate, $endDate]);
-$recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
+$payrollData = $pdo->query("
+    SELECT 
+        e.staffID, e.FirstName, e.LastName, e.IsActive,
+        p.PositionName, p.BaseRate,
+        SUM(TIMESTAMPDIFF(MINUTE, s.ClockIn, s.ClockOut) / 60.0) as TotalHours
+    FROM employee e
+    JOIN position p ON e.PositionID = p.PositionID
+    JOIN employeeshift s ON e.staffID = s.StaffID
+    WHERE s.ClockOut IS NOT NULL
+    GROUP BY e.staffID, e.FirstName, e.LastName, e.IsActive, p.PositionName, p.BaseRate
+    ORDER BY e.LastName ASC
+")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Fisher's Pond</title>
+    <title>Payroll Kiosk | Fisher's Pond POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
 <body>
-    <div class="page-wrapper">
+    <div class="pos-layout">
         <!-- Sidebar -->
         <?php include 'sidebar.php'; ?>
 
-        <main class="page-content">
-            <div class="flex-row-center" style="justify-content: space-between; margin-bottom: 24px;">
-                <h1 style="margin: 0;">Analytics Dashboard</h1>
-                <form method="GET" class="flex-row-center">
-                    <label class="text-bold">View: </label>
-                    <select name="filter" class="form-input form-input-nomargin" style="width: 200px;" onchange="this.form.submit()">
-                        <option value="Today" <?= $filter === 'Today' ? 'selected' : '' ?>>Today</option>
-                        <option value="Weekly" <?= $filter === 'Weekly' ? 'selected' : '' ?>>Weekly</option>
-                        <option value="Monthly" <?= $filter === 'Monthly' ? 'selected' : '' ?>>Month-to-Date</option>
-                        <option value="Bi-Monthly" <?= $filter === 'Bi-Monthly' ? 'selected' : '' ?>>Bi-Monthly</option>
-                        <option value="Annual" <?= $filter === 'Annual' ? 'selected' : '' ?>>Annual</option>
-                    </select>
-                </form>
-            </div>
-            
-            <div class="stats-grid">
-                <div class="stat-card primary">
-                    <h3>Orders (<?= htmlspecialchars($filter) ?>)</h3>
-                    <div class="value"><?= number_format($totalOrders) ?></div>
+        <!-- Main Body -->
+        <main class="pos-main">
+            <header class="pos-header">
+                <h2>Payroll Kiosk</h2>
+                <div class="user-info">
+                    <span><?= htmlspecialchars($activeName) ?> (<?= $roleName ?>)</span>
                 </div>
-                <div class="stat-card success">
-                    <h3>Revenue (<?= htmlspecialchars($filter) ?>)</h3>
-                    <div class="value">₱<?= number_format($revTotal, 2) ?></div>
-                </div>
-            </div>
+            </header>
 
-            <div class="table-container">
-                <h2>Recent Transactions</h2>
-                <?php if (empty($recentOrders)): ?>
-                    <p class="text-muted">No recent orders found.</p>
-                <?php else: ?>
+            <div class="page-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Standard Payroll Summary</h3>
+                    </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Order ID</th>
-                                <th>Date & Time</th>
-                                <th>Cashier</th>
-                                <th>Total Amount</th>
-                                <th>Status</th>
+                                <th>Staff ID</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Base Rate</th>
+                                <th>Hours Logged</th>
+                                <th>Gross Pay</th>
+                                <th>Tax (5%)</th>
+                                <th>Net Pay</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($recentOrders as $order): ?>
+                            <?php foreach($payrollData as $row): 
+                                $hours = floatval($row['TotalHours']);
+                                $rate = floatval($row['BaseRate']);
+                                $gross = $hours * $rate;
+                                $tax = $gross * 0.05;
+                                $net = $gross - $tax;
+                            ?>
                             <tr>
-                                <td class="text-bold">#<?= str_pad($order['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
-                                <td class="text-muted"><?= date('M j, Y h:i A', strtotime($order['OrderDate'])) ?></td>
-                                <td><?= htmlspecialchars($order['FirstName'] ?? 'Admin') ?></td>
-                                <td class="item-total-bold">₱<?= number_format($order['GrandTotal'], 2) ?></td>
-                                <td><span class="status-badge status-<?= htmlspecialchars($order['Status']) ?>"><?= htmlspecialchars($order['Status']) ?></span></td>
+                                <td class="text-bold">#<?= htmlspecialchars($row['staffID']) ?></td>
+                                <td><?= htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']) ?> <?= !$row['IsActive'] ? '<span class="status-badge status-Voided">Inactive</span>' : '' ?></td>
+                                <td><?= htmlspecialchars($row['PositionName']) ?></td>
+                                <td>₱<?= number_format($rate, 2) ?>/hr</td>
+                                <td><?= number_format($hours, 2) ?>h</td>
+                                <td>₱<?= number_format($gross, 2) ?></td>
+                                <td class="text-danger">-₱<?= number_format($tax, 2) ?></td>
+                                <td class="item-total-bold text-success">₱<?= number_format($net, 2) ?></td>
                             </tr>
                             <?php endforeach; ?>
+                            <?php if(empty($payrollData)): ?>
+                                <tr><td colspan="8" class="text-center text-muted p-20">No computed payroll data available yet.</td></tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
-                <?php endif; ?>
+                </div>
             </div>
         </main>
     </div>
-
     <!-- Quick Clock Modal -->
     <div id="quickClockModal" class="modal-overlay hidden">
         <div class="modal">
@@ -146,22 +127,7 @@ $recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Toast Notification System included from index -->
     <script>
-        function showToast(message, type = 'default') {
-            const container = document.getElementById('toastContainer') || (() => {
-                const div = document.createElement('div');
-                div.id = 'toastContainer'; div.className = 'toast-container';
-                document.body.appendChild(div); return div;
-            })();
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`; toast.innerText = message;
-            toast.style.cursor = 'pointer';
-            toast.addEventListener('click', () => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); });
-            container.appendChild(toast);
-            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
-        }
-
         const modal = document.getElementById('quickClockModal');
         const btnOpen = document.getElementById('btnQuickClock');
         const btnClose = document.getElementById('btnCloseModal');

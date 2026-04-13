@@ -9,15 +9,17 @@ require __DIR__ . '/../config.php';
 require __DIR__ . '/menu_data.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'SuperAdmin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
 
-// Only Admins and Managers can access this page
-if (!$isAdmin && !$isManager) {
-    // If it's a Cashier, redirect them back to POS main
+// Only SuperAdmins and Managers can access this page
+if (!$isSuperAdmin && !$isManager) {
     if (isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3) {
         header("Location: index.php");
+    } elseif ($isAdmin) {
+        header("Location: ../admin/index.php");
     } else {
-        header("Location: ../index.php");
+        header("Location: ../employees/index.php");
     }
     exit;
 }
@@ -59,15 +61,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "Category added successfully.";
             $msgType = 'success';
         } else {
-            $msg = "Failed to add category.";
+            $msg = "Failed to add category. It may safely already exist.";
         }
+    } elseif ($action === 'edit_cat') {
+        $catID = (int)($_POST['CategoryID'] ?? 0);
+        if (updateCategory($pdo, $catID, $_POST['CategoryName'] ?? '')) {
+            $msg = "Category updated successfully.";
+            $msgType = 'success';
+        } else {
+            $msg = "Failed to update category. The name may already exist.";
+        }
+    } elseif ($action === 'delete_cat') {
+        $catID = (int)($_POST['CategoryID'] ?? 0);
+        $res = deleteCategory($pdo, $catID);
+        $msg = $res['msg'];
+        $msgType = $res['ok'] ? 'success' : 'error';
     }
 }
 
 $categories = getCategories($pdo);
 $menuItems = getMenuItems($pdo); // passing no params gets all items
 
+// Calculate Stats
+$totalItems = count($menuItems);
+$activeItems = count(array_filter($menuItems, function($i) { return $i['IsAvailable'] == 1; }));
+$totalCategories = count($categories);
+
 $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSION['active_name'];
+$roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -75,35 +96,23 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
     <meta charset="UTF-8">
     <title>Menu Management | Fisher's Pond POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="pos/style.css">
+    <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="pos-layout">
         <!-- Sidebar -->
-        <aside class="pos-sidebar">
-            <div class="brand">Fisher's Pond</div>
-            <nav class="nav-menu">
-                <a href="index.php">New Order</a>
-                <a href="orders.php">Orders</a>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="menu_manage.php" class="active">Menu Management</a>
-            </nav>
-            <div class="sidebar-footer">
-                <button id="btnQuickClock" class="btn btn-outline btn-full-width mb-10">Quick Clock In/Out</button>
-                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
-            </div>
-        </aside>
+        <?php include 'sidebar.php'; ?>
 
         <!-- Main Body -->
         <main class="pos-main">
             <header class="pos-header">
                 <h2>Menu Management</h2>
                 <div class="user-info">
-                    <span><?= htmlspecialchars($activeName) ?> (<?= $isAdmin ? 'Admin' : 'Manager' ?>)</span>
+                    <span><?= htmlspecialchars($activeName) ?> (<?= $roleName ?>)</span>
                 </div>
             </header>
 
-            <div class="page-content">
+            <div class="page-content" style="background-color: #f1f5f9; padding: 32px; display: flex; flex-direction: column; overflow: hidden;">
                 <?php if ($msg): ?>
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
@@ -112,95 +121,168 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                     </script>
                 <?php endif; ?>
 
-                <!-- Add New Item -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Add New Menu Item</h3>
+                <!-- Stats Header -->
+                <div class="stats-grid" style="margin-bottom: 32px; gap: 20px;">
+                    <div class="stat-card primary" style="padding: 20px;">
+                        <h3>Total Menu Items</h3>
+                        <div class="value"><?= $totalItems ?></div>
                     </div>
-                    <form method="POST">
-                        <input type="hidden" name="action" value="add_item">
-                        <div class="flex-row-align-end">
-                            <div class="form-group-inline">
-                                <label>Item Name</label>
-                                <input type="text" name="ItemName" required class="form-input form-input-nomargin">
-                            </div>
-                            <div class="form-group-inline">
-                                <label>Category</label>
-                                <select name="CategoryID" required class="form-input form-input-nomargin">
-                                    <?php foreach ($categories as $cat): ?>
-                                        <option value="<?= $cat['CategoryID'] ?>"><?= htmlspecialchars($cat['CategoryName']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="form-group-inline flex-05">
-                                <label>Price (₱)</label>
-                                <input type="number" step="0.01" min="0" name="Price" required class="form-input form-input-nomargin">
-                            </div>
-                            <div class="form-group-inline flex-05">
-                                <label>Status</label>
-                                <select name="IsAvailable" class="form-input form-input-nomargin">
-                                    <option value="1">Available</option>
-                                    <option value="0">Disabled</option>
-                                </select>
-                            </div>
-                            <div>
-                                <button type="submit" class="btn btn-clock-in">Save</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                
-                <div class="card mb-10">
-                    <form method="POST" class="flex-row-center">
-                        <input type="hidden" name="action" value="add_cat">
-                        <input type="text" name="CategoryName" placeholder="New Category Name" required class="form-input form-input-nomargin input-w-250">
-                        <button type="submit" class="btn btn-outline btn-border-gray">Add Category</button>
-                    </form>
+                    <div class="stat-card success" style="padding: 20px;">
+                        <h3>Active Items</h3>
+                        <div class="value text-success"><?= $activeItems ?></div>
+                    </div>
+                    <div class="stat-card" style="padding: 20px; border-top: 4px solid var(--text-muted);">
+                        <h3>Total Categories</h3>
+                        <div class="value"><?= $totalCategories ?></div>
+                    </div>
                 </div>
 
-                <!-- Existing Items -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Current Menu</h3>
+                <!-- Main Grid Layout -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; flex: 1; min-height: 0;">
+                    
+                    <!-- Left Column: Menu Items -->
+                    <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                        <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+                            <h3 style="font-size: 1.25rem;">Current Menu</h3>
+                            <button class="btn btn-clock-in btn-small" onclick="document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addModal').style.display='flex';" style="margin:0;">+ Add New Item</button>
+                        </div>
+                        <div style="overflow-y: auto; flex: 1; min-height: 0;">
+                            <table class="data-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Category</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($menuItems as $item): ?>
+                                        <tr class="row-hover">
+                                            <td class="text-bold"><?= htmlspecialchars($item['ItemName']) ?></td>
+                                            <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color);"><?= htmlspecialchars($item['CategoryName']) ?></span></td>
+                                            <td class="item-total-bold text-primary">₱<?= number_format($item['Price'], 2) ?></td>
+                                            <td>
+                                                <?= $item['IsAvailable'] == 1 ? '<span class="status-badge status-Completed">Available</span>' : '<span class="status-badge status-Voided">Disabled</span>' ?>
+                                            </td>
+                                            <td style="text-align: right;">
+                                                <div class="flex-row-gap" style="justify-content: flex-end;">
+                                                    <button class="btn btn-outline btn-small btn-edit" style="margin:0;" onclick="editItem(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                                                    <form method="POST" class="inline-block" style="margin:0; display:inline-block;">
+                                                        <input type="hidden" name="action" value="toggle_status">
+                                                        <input type="hidden" name="ItemID" value="<?= $item['ItemID'] ?>">
+                                                        <input type="hidden" name="status" value="<?= $item['IsAvailable'] == 1 ? 0 : 1 ?>">
+                                                        <button type="submit" class="btn btn-outline btn-small <?= $item['IsAvailable'] == 1 ? 'btn-toggle-off' : 'btn-toggle-on' ?>" style="margin:0;">
+                                                            <?= $item['IsAvailable'] == 1 ? 'Disable' : 'Enable' ?>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if (empty($menuItems)): ?>
+                                        <tr><td colspan="5" class="text-center text-muted p-20">No menu items found.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th>Item Name</th>
-                                <th>Price</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($menuItems as $item): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($item['CategoryName']) ?></td>
-                                    <td>
-                                        <div class="flex-row-gap">
-                                            <button class="btn btn-outline btn-small btn-edit" onclick="editItem(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
-                                            
-                                            <form method="POST" class="inline-block">
-                                                <input type="hidden" name="action" value="toggle_status">
-                                                <input type="hidden" name="ItemID" value="<?= $item['ItemID'] ?>">
-                                                <input type="hidden" name="status" value="<?= $item['IsAvailable'] == 1 ? 0 : 1 ?>">
-                                                <button type="submit" class="btn btn-outline btn-small <?= $item['IsAvailable'] == 1 ? 'btn-toggle-off' : 'btn-toggle-on' ?>">
-                                                    <?= $item['IsAvailable'] == 1 ? 'Disable' : 'Enable' ?>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($menuItems)): ?>
-                                <tr><td colspan="5" class="text-center text-muted p-20">No menu items found.</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+
+                    <!-- Right Column: Categories Management -->
+                    <div style="display: flex; flex-direction: column; gap: 24px; min-height: 0; overflow: hidden;">
+                        
+                        <!-- Add Category Card -->
+                        <div class="card" style="margin-bottom: 0;">
+                            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+                                <h3 style="font-size: 1.1rem;">Add Category</h3>
+                            </div>
+                            <form method="POST" class="flex-row-gap" style="align-items: flex-end;">
+                                <input type="hidden" name="action" value="add_cat">
+                                <div class="form-group-inline mb-0" style="flex: 1; margin: 0;">
+                                    <input type="text" name="CategoryName" placeholder="New Category Name" required class="form-input form-input-nomargin">
+                                </div>
+                                <button type="submit" class="btn btn-outline btn-border-gray" style="margin: 0; padding: 12px 16px; white-space: nowrap;">Add</button>
+                            </form>
+                        </div>
+
+                        <!-- Current Categories Card -->
+                        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
+                            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+                                <h3 style="font-size: 1.1rem;">Manage Categories</h3>
+                            </div>
+                            <div style="flex: 1; overflow-y: auto; padding-right: 8px;">
+                                <ul style="list-style: none; padding: 0; margin: 0;">
+                                    <?php foreach ($categories as $cat): ?>
+                                        <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                                            <span style="font-weight: 500; font-size: 0.95rem; color: var(--text-dark);"><?= htmlspecialchars($cat['CategoryName']) ?></span>
+                                            <div class="flex-row-gap" style="gap: 8px;">
+                                                <button class="btn btn-outline btn-small btn-edit" style="margin: 0; padding: 6px 10px;" onclick="editCategory(<?= $cat['CategoryID'] ?>, <?= htmlspecialchars(json_encode($cat['CategoryName'])) ?>)">Edit</button>
+                                                <form method="POST" style="margin: 0; display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this category? It must be empty first.');">
+                                                    <input type="hidden" name="action" value="delete_cat">
+                                                    <input type="hidden" name="CategoryID" value="<?= $cat['CategoryID'] ?>">
+                                                    <button type="submit" class="btn btn-outline btn-small btn-toggle-off" style="margin: 0; padding: 6px 10px;">Del</button>
+                                                </form>
+                                            </div>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addModal" class="modal-overlay hidden">
+        <div class="modal">
+            <button class="modal-close" onclick="document.getElementById('addModal').classList.add('hidden')">&times;</button>
+            <h3>Add Menu Item</h3>
+            <form method="POST" class="mt-20">
+                <input type="hidden" name="action" value="add_item">
+
+                <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-dark); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">1. Basic Details</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group-inline mb-15">
+                            <label>Item Name</label>
+                            <input type="text" name="ItemName" required class="form-input">
+                        </div>
+                        <div class="form-group-inline mb-15">
+                            <label>Category Group</label>
+                            <select name="CategoryID" required class="form-input">
+                                <option value="" disabled selected>-- Select Category --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['CategoryID'] ?>"><?= htmlspecialchars($cat['CategoryName']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-dark); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">2. Pricing & Availability</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group-inline mb-15">
+                            <label>Retail Price (₱)</label>
+                            <input type="number" step="0.01" min="0" name="Price" required class="form-input">
+                        </div>
+                        <div class="form-group-inline mb-15">
+                            <label>Current Status</label>
+                            <select name="IsAvailable" class="form-input">
+                                <option value="1" selected>Available for Order</option>
+                                <option value="0">Disabled / Out of Stock</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-clock-in btn-full-width">Register New Item</button>
+            </form>
+        </div>
     </div>
 
     <!-- Edit Modal -->
@@ -212,28 +294,58 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
                 <input type="hidden" name="action" value="edit_item">
                 <input type="hidden" name="ItemID" id="edit_ItemID">
                 
-                <div class="form-group-inline mb-15">
-                    <label>Item Name</label>
-                    <input type="text" name="ItemName" id="edit_ItemName" required class="form-input">
+                <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-dark); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">1. Basic Details</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group-inline mb-15">
+                            <label>Item Name</label>
+                            <input type="text" name="ItemName" id="edit_ItemName" required class="form-input">
+                        </div>
+                        <div class="form-group-inline mb-15">
+                            <label>Category Group</label>
+                            <select name="CategoryID" id="edit_CategoryID" required class="form-input">
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['CategoryID'] ?>"><?= htmlspecialchars($cat['CategoryName']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group-inline mb-15">
-                    <label>Category</label>
-                    <select name="CategoryID" id="edit_CategoryID" required class="form-input">
-                        <?php foreach ($categories as $cat): ?>
-                            <option value="<?= $cat['CategoryID'] ?>"><?= htmlspecialchars($cat['CategoryName']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                
+                <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-dark); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">2. Pricing & Availability</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group-inline mb-15">
+                            <label>Retail Price (₱)</label>
+                            <input type="number" step="0.01" min="0" name="Price" id="edit_Price" required class="form-input">
+                        </div>
+                        <div class="form-group-inline mb-15">
+                            <label>Current Status</label>
+                            <select name="IsAvailable" id="edit_IsAvailable" class="form-input">
+                                <option value="1">Available for Order</option>
+                                <option value="0">Disabled / Out of Stock</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group-inline mb-15">
-                    <label>Price (₱)</label>
-                    <input type="number" step="0.01" min="0" name="Price" id="edit_Price" required class="form-input">
-                </div>
+
+                <button type="submit" class="btn btn-clock-in btn-full-width">Commit Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div id="editCatModal" class="modal-overlay hidden">
+        <div class="modal">
+            <button class="modal-close" onclick="document.getElementById('editCatModal').classList.add('hidden')">&times;</button>
+            <h3>Edit Category</h3>
+            <form method="POST" class="mt-20">
+                <input type="hidden" name="action" value="edit_cat">
+                <input type="hidden" name="CategoryID" id="edit_CatID">
+                
                 <div class="form-group-inline mb-20">
-                    <label>Status</label>
-                    <select name="IsAvailable" id="edit_IsAvailable" class="form-input">
-                        <option value="1">Available</option>
-                        <option value="0">Disabled</option>
-                    </select>
+                    <label>Category Name</label>
+                    <input type="text" name="CategoryName" id="edit_CatName" required class="form-input">
                 </div>
                 <button type="submit" class="btn btn-clock-in btn-full-width">Save Changes</button>
             </form>
@@ -249,6 +361,13 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
             document.getElementById('edit_IsAvailable').value = item.IsAvailable;
             document.getElementById('editModal').classList.remove('hidden');
             document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function editCategory(id, name) {
+            document.getElementById('edit_CatID').value = id;
+            document.getElementById('edit_CatName').value = name;
+            document.getElementById('editCatModal').classList.remove('hidden');
+            document.getElementById('editCatModal').style.display = 'flex';
         }
     </script>
 
@@ -285,13 +404,15 @@ $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSI
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             toast.innerText = message;
+            toast.style.cursor = 'pointer';
+            toast.addEventListener('click', () => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); });
             
             container.appendChild(toast);
             
             setTimeout(() => {
                 toast.style.opacity = '0';
                 setTimeout(() => toast.remove(), 300);
-            }, 5000);
+            }, 3000);
         }
 
         const modal = document.getElementById('quickClockModal');

@@ -8,11 +8,12 @@ session_start();
 require __DIR__ . '/../config.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'SuperAdmin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
 $isCashier = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3;
 
-if (!$isAdmin && !$isManager && !$isCashier) {
-    header("Location: ../index.php");
+if (!$isSuperAdmin && !$isManager && !$isCashier) {
+    header("Location: ../employees/index.php");
     exit;
 }
 
@@ -33,27 +34,15 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders History - Fisher's Pond</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="pos/style.css">
+    <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="page-wrapper">
-        <aside class="pos-sidebar">
-            <div class="brand">Fisher's Pond</div>
-            <nav class="nav-menu">
-                <a href="index.php">New Order</a>
-                <a href="orders.php" class="active">Orders</a>
-                <?php if ($isAdmin || $isManager): ?>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="menu_manage.php">Menu Management</a>
-                <?php endif; ?>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
-            </div>
-        </aside>
+        <!-- Sidebar -->
+        <?php include 'sidebar.php'; ?>
 
         <main class="page-content">
-            <h1>Transaction Log</h1>
+            <h1 class="page-title">Transaction Log</h1>
             
             <div class="table-container">
                 <?php if (empty($orders)): ?>
@@ -118,11 +107,32 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- Quick Clock Modal -->
+    <div id="quickClockModal" class="modal-overlay hidden">
+        <div class="modal">
+            <button class="modal-close" id="btnCloseModal">&times;</button>
+            <h3>Quick Clock In / Out</h3>
+            <p class="text-muted-sm mb-20">Enter your Staff ID and Password.</p>
+            <div id="quickClockRes" class="quick-clock-res hidden"></div>
+            
+            <form id="frmQuickClock">
+                <input type="text" id="qc_login_id" placeholder="Staff ID or Username" required class="form-input">
+                <input type="password" id="qc_password" placeholder="Password" required class="form-input">
+                
+                <div class="flex-row-gap mt-20">
+                    <button type="button" class="btn btn-clock-in flex-1" onclick="submitQuickClock('in')">Clock In</button>
+                    <button type="button" class="btn btn-clock-out flex-1" onclick="submitQuickClock('out')">Clock Out</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let currentOpenOrderId = null;
 
-        document.getElementById('btnCloseModal').addEventListener('click', () => {
-            document.getElementById('receiptModal').classList.add('hidden');
+        document.getElementById('btnCloseModal')?.addEventListener('click', () => {
+            const receiptModal = document.getElementById('receiptModal');
+            if(receiptModal) receiptModal.classList.add('hidden');
         });
 
         async function openReceipt(orderId) {
@@ -185,6 +195,72 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             } catch (e) {
                 alert('Connection error voiding order.');
+            }
+        }
+
+        const qcModal = document.getElementById('quickClockModal');
+        const qcBtnOpen = document.getElementById('btnQuickClock');
+        const qcBtnClose = document.getElementById('btnCloseModal'); // This ID clashes with receipt modal close in the vanilla code. Let me query selector instead.
+        
+        if (qcBtnOpen) {
+            qcBtnOpen.addEventListener('click', () => {
+                qcModal.classList.remove('hidden');
+                qcModal.classList.add('show-flex');
+                document.getElementById('qc_login_id').focus();
+            });
+        }
+        
+        qcModal?.querySelector('.modal-close')?.addEventListener('click', () => {
+            qcModal.classList.add('hidden');
+            qcModal.classList.remove('show-flex');
+            const resDiv = document.getElementById('quickClockRes');
+            resDiv.classList.add('hidden');
+            resDiv.classList.remove('show-block');
+            document.getElementById('frmQuickClock').reset();
+        });
+
+        async function submitQuickClock(actionType) {
+            const login_id = document.getElementById('qc_login_id').value;
+            const password = document.getElementById('qc_password').value;
+            const resDiv = document.getElementById('quickClockRes');
+
+            if (!login_id || !password) {
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('show-block');
+                resDiv.className = 'quick-clock-res alert-box alert-error show-block';
+                resDiv.innerText = 'Please enter both ID and Password.';
+                return;
+            }
+
+            try {
+                const fd = new FormData();
+                fd.append('login_id', login_id);
+                fd.append('password', password);
+                fd.append('clock_action', actionType);
+
+                const response = await fetch('ajax_clock.php', { method: 'POST', body: fd });
+                const data = await response.json();
+
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('show-block');
+                if (data.ok) {
+                    resDiv.className = 'quick-clock-res alert-box alert-success show-block';
+                    resDiv.innerText = data.msg;
+                    setTimeout(() => {
+                        qcModal.querySelector('.modal-close')?.click();
+                        if (actionType === 'out' && data.is_self) {
+                            window.location.href = '../index.php';
+                        }
+                    }, 2500);
+                } else {
+                    resDiv.className = 'quick-clock-res alert-box alert-error show-block';
+                    resDiv.innerText = data.msg;
+                }
+            } catch (err) {
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('show-block');
+                resDiv.className = 'quick-clock-res alert-box alert-error show-block';
+                resDiv.innerText = 'Network Error. Please try again.';
             }
         }
     </script>

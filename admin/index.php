@@ -38,19 +38,30 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
     <meta http-equiv="refresh" content="60">
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="admin/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="sidebar">
         <div class="sidebar-brand">Fisher's Pond</div>
         <div class="sidebar-nav">
-            <a href="index.php" class="active">Employees</a>
+            <a href="index.php" class="<?= in_array($tab, ['active', 'deactivated', 'attendance']) ? 'active' : '' ?>">Employees</a>
+            <a href="?tab=settings" class="<?= $tab === 'settings' ? 'active' : '' ?>">Admin Settings</a>
+            <?php if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): ?>
+                <div class="sidebar-divider"></div>
+                <div class="sidebar-heading">SuperAdmin Access</div>
+                <a href="?tab=superadmin&view=pos" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'pos') ? 'active' : '' ?>">Cashier POS</a>
+                <a href="?tab=superadmin&view=orders" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'orders') ? 'active' : '' ?>">Orders</a>
+                <a href="?tab=superadmin&view=dashboard" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'dashboard') ? 'active' : '' ?>">POS Analytics</a>
+                <a href="?tab=superadmin&view=menu" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'menu') ? 'active' : '' ?>">Menu Management</a>
+                <a href="?tab=superadmin&view=payroll" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'payroll') ? 'active' : '' ?>">Payroll Kiosk</a>
+                <div class="sidebar-divider"></div>
+            <?php endif; ?>
             <a href="../admin/adminLogOut.php" class="logout danger-text">Log Out</a>
         </div>
     </div>
 
     <div class="main-content">
-        <div class="header">
+        <div class="header" <?= $tab === 'superadmin' ? 'style="display: none;"' : '' ?>>
             <div>
                 <h1>Admin Dashboard</h1>
                 <p class="subtitle">Manage your employee roster and attendance</p>
@@ -58,17 +69,15 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             <div class="header-actions">
                 <?php if ($tab === 'attendance'): ?>
                 <button class="btn btn-secondary btn-refresh" onclick="window.location.reload()">Refresh Data</button>
-                <?php else: ?>
-                <button class="btn btn-primary" onclick="openModal()">+ Add Employee</button>
                 <?php endif; ?>
             </div>
         </div>
         
-        <div class="tabs-container">
+        <div class="tabs-container" <?= !in_array($tab, ['active', 'deactivated', 'attendance']) ? 'style="display: none;"' : '' ?>>
+            <button class="tab-link" style="margin-right: 16px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="openModal()">+ Add Employee</button>
             <a href="?tab=active" class="tab-link <?= $tab === 'active' ? 'active-tab' : '' ?>">Active Employees</a>
             <a href="?tab=deactivated" class="tab-link <?= $tab === 'deactivated' ? 'active-tab' : '' ?>">Deactivated Employees</a>
             <a href="?tab=attendance" class="tab-link <?= $tab === 'attendance' ? 'active-tab' : '' ?>">Attendance Records</a>
-            <a href="?tab=settings" class="tab-link <?= $tab === 'settings' ? 'active-tab' : '' ?>">Admin Settings</a>
         </div>
         
         <?php if (!empty($msg)): ?>
@@ -127,7 +136,7 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                         <form method="POST" action="action.php" class="inline-form" onsubmit="return confirm('Reactivate this employee?');">
                             <input type="hidden" name="action" value="reactivate">
                             <input type="hidden" name="staffID" value="<?= htmlspecialchars($emp['staffID']) ?>">
-                            <button type="submit" class="btn btn-primary btn-success">Reactivate</button>
+                            <button type="submit" class="btn btn-success">Reactivate</button>
                         </form>
                         <?php endif; ?>
                     </td>
@@ -191,6 +200,18 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             </form>
         </div>
         
+        <?php elseif ($tab === 'superadmin' && isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): 
+            $view = $_GET['view'] ?? 'pos';
+            $iframeSrc = '';
+            if ($view === 'pos') $iframeSrc = '../pos/index.php';
+            elseif ($view === 'orders') $iframeSrc = '../pos/orders.php';
+            elseif ($view === 'dashboard') $iframeSrc = '../pos/dashboard.php';
+            elseif ($view === 'menu') $iframeSrc = '../pos/menu_manage.php';
+            elseif ($view === 'payroll') $iframeSrc = '../pos/payroll.php';
+        ?>
+        <div style="height: 100vh; width: 100%; margin: -40px; padding: 0;">
+            <iframe src="<?= $iframeSrc ?>" width="100%" height="100%" frameborder="0" style="display: block;"></iframe>
+        </div>
         <?php endif; ?>
     </div>
 
@@ -219,16 +240,6 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                 </div>
                 
                 <div class="form-group">
-                    <label>Position</label>
-                    <select name="PositionID" id="empPositionID" required>
-                        <option value="" disabled selected>-- Select a Role --</option>
-                        <?php foreach ($positions as $p): ?>
-                        <option value="<?= htmlspecialchars($p['PositionID']) ?>"><?= htmlspecialchars($p['PositionName']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="form-group">
                     <label>Birth Date</label>
                     <input type="date" name="BirthDate" id="empBirthDate" required>
                 </div>
@@ -241,6 +252,16 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                 <div class="form-group">
                     <label>Contact Number</label>
                     <input type="tel" name="ContactNumber" id="empContactNumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Position</label>
+                    <select name="PositionID" id="empPositionID" required>
+                        <option value="" disabled selected>-- Select a Role --</option>
+                        <?php foreach ($positions as $p): ?>
+                        <option value="<?= htmlspecialchars($p['PositionID']) ?>"><?= htmlspecialchars($p['PositionName']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
                 <div class="modal-actions">

@@ -11,6 +11,7 @@ function unifiedLogin(PDO $pdo, string $login_id, string $password): array {
         if (password_verify($password, $admin['PasswordHash'])) {
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['admin_username']  = $admin['Username'];
+            $_SESSION['admin_role']      = $admin['AdminRole'] ?? 'Admin';
             return ['ok' => true, 'role' => 'admin', 'redirect' => 'admin/index.php'];
         } else {
             return ['ok' => false, 'msg' => 'Incorrect password.'];

@@ -9,19 +9,32 @@ require __DIR__ . '/../config.php';
 require __DIR__ . '/menu_data.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
-$isPosStaff = isset($_SESSION['active_staffID']) && isset($_SESSION['position_id']) && in_array($_SESSION['position_id'], [1, 3]);
+$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'SuperAdmin';
+$isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
+$isCashier = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3;
 
 // Fetch dynamic categories and items
 $categories = getCategories($pdo);
-$menuItems = getMenuItems($pdo); // Fetch all to show which are out of stock
+$menuItems = getMenuItems($pdo);
 
-if (!$isAdmin && !$isPosStaff) {
-    header("Location: ../index.php");
+if (!$isSuperAdmin && !$isManager && !$isCashier) {
+    header("Location: ../employees/index.php");
     exit;
 }
 
 $activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSION['active_name'];
-$roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manager" : "Cashier");
+$roleName = $isSuperAdmin ? "SuperAdmin" : ($isAdmin ? "Administrator" : ($isManager ? "Manager" : "Cashier"));
+
+// Group items hierarchically for UI
+$groupedItems = [];
+foreach ($categories as $cat) {
+    $groupedItems[$cat['CategoryID']] = ['info' => $cat, 'items' => []];
+}
+foreach ($menuItems as $item) {
+    if (isset($groupedItems[$item['CategoryID']])) {
+        $groupedItems[$item['CategoryID']]['items'][] = $item;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,26 +42,12 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
     <meta charset="UTF-8">
     <title>POS | Fisher's Pond</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="pos/style.css">
+    <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="pos-layout">
         <!-- Sidebar -->
-        <aside class="pos-sidebar">
-            <div class="brand">Fisher's Pond</div>
-            <nav class="nav-menu">
-                <a href="index.php" class="active">New Order</a>
-                <a href="orders.php">Orders</a>
-                <?php if ($isAdmin || (isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1)): ?>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="menu_manage.php">Menu Management</a>
-                <?php endif; ?>
-            </nav>
-            <div class="sidebar-footer">
-                <button id="btnQuickClock" class="btn btn-outline btn-full-width mb-10">Quick Clock In/Out</button>
-                <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
-            </div>
-        </aside>
+        <?php include 'sidebar.php'; ?>
 
         <!-- Main Body -->
         <main class="pos-main">
@@ -62,36 +61,36 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
             <div class="pos-content">
                 <!-- Menu Items Grid -->
                 <div class="menu-area">
-                    <div class="category-tabs">
-                        <button class="active" onclick="filterCategory('all')">All</button>
-                        <?php foreach ($categories as $cat): ?>
-                            <button onclick="filterCategory(<?= $cat['CategoryID'] ?>)"><?= htmlspecialchars($cat['CategoryName']) ?></button>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="items-grid" id="itemsGrid">
-                        <?php foreach ($menuItems as $item): ?>
-                            <?php 
-                                $jsItem = htmlspecialchars(json_encode([
-                                    'id'    => $item['ItemID'], 
-                                    'name'  => $item['ItemName'], 
-                                    'price' => (float)$item['Price']
-                                ]));
-                            ?>
-                            <div class="item-card <?= $item['IsAvailable'] ? '' : 'disabled-item' ?>" 
-                                 data-category="<?= $item['CategoryID'] ?>"
-                                 <?= $item['IsAvailable'] ? "onclick='addToCart($jsItem)'" : "" ?>>
-                                <div class="item-name"><?= htmlspecialchars($item['ItemName']) ?></div>
-                                <div class="item-price">₱<?= number_format($item['Price'], 2) ?></div>
-                                <?php if (!$item['IsAvailable']): ?>
-                                    <div class="text-danger-sm-bold mt-4">Not Available</div>
-                                <?php endif; ?>
+                    <?php if (empty($menuItems)): ?>
+                        <div class="empty-msg-grid">No menu items configured yet.</div>
+                    <?php else: ?>
+                        <?php foreach($groupedItems as $group): if(empty($group['items'])) continue; ?>
+                            <div class="category-section" style="margin-bottom: 40px;">
+                                <h3 style="font-size: 1.25rem; font-weight: 800; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 20px; color: var(--text-dark);">
+                                    <?= htmlspecialchars($group['info']['CategoryName']) ?>
+                                </h3>
+                                <div class="items-grid">
+                                    <?php foreach ($group['items'] as $item): ?>
+                                        <?php 
+                                            $jsItem = htmlspecialchars(json_encode([
+                                                'id'    => $item['ItemID'], 
+                                                'name'  => $item['ItemName'], 
+                                                'price' => (float)$item['Price']
+                                            ]));
+                                        ?>
+                                        <div class="item-card <?= $item['IsAvailable'] ? '' : 'disabled-item' ?>" 
+                                             <?= $item['IsAvailable'] ? "onclick='addToCart($jsItem)'" : "" ?>>
+                                            <div class="item-name"><?= htmlspecialchars($item['ItemName']) ?></div>
+                                            <div class="item-price">₱<?= number_format($item['Price'], 2) ?></div>
+                                            <?php if (!$item['IsAvailable']): ?>
+                                                <div class="text-danger-sm-bold mt-4">Not Available</div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
-                        
-                        <?php if (empty($menuItems)): ?>
-                            <div class="empty-msg-grid">No menu items configured yet.</div>
-                        <?php endif; ?>
-                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Cart / Order Summary Sidebar -->
@@ -104,7 +103,7 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                         <div class="totals-row"><span>Subtotal</span><span id="lblSubtotal">₱0.00</span></div>
                         <div class="totals-row"><span>Tax (12%)</span><span id="lblTax">₱0.00</span></div>
                         <div class="totals-row grand-total"><span>Total</span><span id="lblTotal">₱0.00</span></div>
-                        <button class="btn btn-pay" onclick="processCheckout()">Pay Order</button>
+                        <button class="btn btn-pay" onclick="openPaymentModal()">Pay Order</button>
                     </div>
                 </aside>
             </div>
@@ -112,12 +111,12 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
     </div>
 
     <!-- Quick Clock Modal -->
-    <div id="quickClockModal" class="modal-overlay" style="display: none;">
+    <div id="quickClockModal" class="modal-overlay hidden">
         <div class="modal">
             <button class="modal-close" id="btnCloseModal">&times;</button>
             <h3>Quick Clock In / Out</h3>
             <p class="text-muted-sm mb-20">Enter your Staff ID and Password.</p>
-            <div id="quickClockRes" style="display: none; padding: 10px; margin-bottom: 15px; border-radius: 8px;"></div>
+            <div id="quickClockRes" class="quick-clock-res hidden"></div>
             
             <form id="frmQuickClock">
                 <input type="text" id="qc_login_id" placeholder="Staff ID or Username" required class="form-input">
@@ -128,6 +127,28 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                     <button type="button" class="btn btn-clock-out flex-1" onclick="submitQuickClock('out')">Clock Out</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal-overlay hidden">
+        <div class="modal">
+            <button class="modal-close" onclick="document.getElementById('paymentModal').classList.add('hidden')">&times;</button>
+            <h3>Payment Terminal</h3>
+            <div class="flex-col-end" style="align-items: flex-start; margin-bottom: 20px;">
+                <div style="font-size: 1.1rem;">Grand Total: <strong id="pay_grandTotal" style="font-size:1.5rem; color:var(--primary);">₱0.00</strong></div>
+            </div>
+            
+            <div class="form-group-inline mb-20">
+                <label>Amount Tendered (Cash)</label>
+                <input type="number" step="0.01" min="0" id="pay_Amount" class="form-input" style="font-size: 1.5rem; font-weight:bold; height: 60px;" placeholder="0.00" onkeyup="calculateChange()">
+            </div>
+            
+            <div class="flex-col-end" style="align-items: flex-start; margin-bottom: 20px;">
+                <div style="font-size: 1.1rem;">Change Due: <strong id="pay_Change" style="font-size:1.5rem; color:var(--success);">₱0.00</strong></div>
+            </div>
+
+            <button type="button" id="btnConfirmPay" class="btn btn-pay" style="margin-top:0;" onclick="processCheckout()" disabled>Confirm Payment</button>
         </div>
     </div>
 
@@ -144,13 +165,15 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             toast.innerText = message;
+            toast.style.cursor = 'pointer';
+            toast.addEventListener('click', () => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); });
             
             container.appendChild(toast);
             
             setTimeout(() => {
                 toast.style.opacity = '0';
                 setTimeout(() => toast.remove(), 300);
-            }, 5000);
+            }, 3000);
         }
 
         async function submitSelfClock(actionType) {
@@ -243,13 +266,42 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
             document.getElementById('lblSubtotal').innerText = '₱' + subtotal.toFixed(2);
             document.getElementById('lblTax').innerText = '₱' + tax.toFixed(2);
             document.getElementById('lblTotal').innerText = '₱' + total.toFixed(2);
+            
+            // Expose total globally for modal
+            window.currentGrandTotal = total;
         }
 
-        async function processCheckout() {
+        function openPaymentModal() {
             if (cart.length === 0) {
                 showToast('Cart is empty. Please add items first.', 'error');
                 return;
             }
+            document.getElementById('pay_grandTotal').innerText = '₱' + window.currentGrandTotal.toFixed(2);
+            document.getElementById('pay_Amount').value = '';
+            document.getElementById('pay_Change').innerText = '₱0.00';
+            document.getElementById('btnConfirmPay').disabled = true;
+            document.getElementById('paymentModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('pay_Amount').focus(), 100);
+        }
+
+        function calculateChange() {
+            const tendered = parseFloat(document.getElementById('pay_Amount').value) || 0;
+            const diff = tendered - window.currentGrandTotal;
+            const btn = document.getElementById('btnConfirmPay');
+            if (diff >= 0) {
+                document.getElementById('pay_Change').innerText = '₱' + diff.toFixed(2);
+                btn.disabled = false;
+            } else {
+                document.getElementById('pay_Change').innerText = 'Insufficient';
+                btn.disabled = true;
+            }
+        }
+
+        async function processCheckout() {
+            if (cart.length === 0) return;
+            
+            // disable button prevent double click
+            document.getElementById('btnConfirmPay').disabled = true;
             
             try {
                 const response = await fetch('checkout.php', {
@@ -263,11 +315,14 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                     showToast('Payment successful! Order #' + data.order_id, 'success');
                     cart = [];
                     renderCart();
+                    document.getElementById('paymentModal').classList.add('hidden');
                 } else {
                     showToast('Failed to checkout: ' + data.msg, 'error');
+                    document.getElementById('btnConfirmPay').disabled = false;
                 }
             } catch(e) {
                 showToast('Network error during checkout.', 'error');
+                document.getElementById('btnConfirmPay').disabled = false;
             }
         }
 
@@ -276,30 +331,19 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
         const btnClose = document.getElementById('btnCloseModal');
 
         btnOpen.addEventListener('click', () => {
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            modal.classList.add('show-flex');
             document.getElementById('qc_login_id').focus();
         });
         btnClose.addEventListener('click', () => {
-            modal.style.display = 'none';
-            document.getElementById('quickClockRes').style.display = 'none';
+            modal.classList.add('hidden');
+            modal.classList.remove('show-flex');
+            document.getElementById('quickClockRes').classList.add('hidden');
+            document.getElementById('quickClockRes').classList.remove('show-block');
             document.getElementById('frmQuickClock').reset();
         });
 
-        function filterCategory(catId) {
-            // Update active tab styling
-            document.querySelectorAll('.category-tabs button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Filter items
-            const items = document.querySelectorAll('.item-card');
-            items.forEach(item => {
-                if (catId === 'all' || item.getAttribute('data-category') == catId) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
+        // filterCategory method removed since we are using hierarchical rendering directly instead of client side tabs
 
         async function submitQuickClock(actionType) {
             const login_id = document.getElementById('qc_login_id').value;
@@ -307,8 +351,9 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
             const resDiv = document.getElementById('quickClockRes');
 
             if (!login_id || !password) {
-                resDiv.style.display = 'block';
-                resDiv.className = 'alert-box alert-error';
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('show-block');
+                resDiv.className = 'quick-clock-res alert-box alert-error show-block';
                 resDiv.innerText = 'Please enter both ID and Password.';
                 return;
             }
@@ -325,9 +370,10 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                 });
                 const data = await response.json();
 
-                resDiv.style.display = 'block';
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('show-block');
                 if (data.ok) {
-                    resDiv.className = 'alert-box alert-success';
+                    resDiv.className = 'quick-clock-res alert-box alert-success show-block';
                     resDiv.innerText = data.msg;
                     setTimeout(() => {
                         btnClose.click();
@@ -336,12 +382,13 @@ $roleName = $isAdmin ? "Administrator" : ($_SESSION['position_id'] == 1 ? "Manag
                         }
                     }, 2500);
                 } else {
-                    resDiv.className = 'alert-box alert-error';
+                    resDiv.className = 'quick-clock-res alert-box alert-error show-block';
                     resDiv.innerText = data.msg;
                 }
             } catch (err) {
-                resDiv.style.display = 'block';
-                resDiv.className = 'alert-box alert-error';
+                resDiv.classList.remove('hidden');
+                resDiv.classList.add('show-block');
+                resDiv.className = 'quick-clock-res alert-box alert-error show-block';
                 resDiv.innerText = 'Network Error. Please try again.';
             }
         }

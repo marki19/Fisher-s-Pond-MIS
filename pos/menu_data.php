@@ -9,10 +9,43 @@ function getCategories(PDO $pdo): array {
 }
 
 function addCategory(PDO $pdo, string $name): bool {
-    $name = trim($name);
+    $name = ucwords(trim($name));
     if (empty($name)) return false;
+    
+    // Check for duplicates
+    $check = $pdo->prepare("SELECT COUNT(*) FROM category WHERE CategoryName = ?");
+    $check->execute([$name]);
+    if ($check->fetchColumn() > 0) return false;
+    
     $stmt = $pdo->prepare("INSERT INTO category (CategoryName) VALUES (?)");
     return $stmt->execute([$name]);
+}
+
+function updateCategory(PDO $pdo, int $categoryID, string $name): bool {
+    $name = ucwords(trim($name));
+    if (empty($name)) return false;
+    
+    // Check for duplicates (excluding current category)
+    $check = $pdo->prepare("SELECT COUNT(*) FROM category WHERE CategoryName = ? AND CategoryID != ?");
+    $check->execute([$name, $categoryID]);
+    if ($check->fetchColumn() > 0) return false;
+
+    $stmt = $pdo->prepare("UPDATE category SET CategoryName = ? WHERE CategoryID = ?");
+    return $stmt->execute([$name, $categoryID]);
+}
+
+function deleteCategory(PDO $pdo, int $categoryID): array {
+    $check = $pdo->prepare("SELECT COUNT(*) FROM menu_item WHERE CategoryID = ?");
+    $check->execute([$categoryID]);
+    if ($check->fetchColumn() > 0) {
+        return ['ok' => false, 'msg' => 'Cannot delete: Category still contains items.'];
+    }
+    
+    $stmt = $pdo->prepare("DELETE FROM category WHERE CategoryID = ?");
+    if ($stmt->execute([$categoryID])) {
+        return ['ok' => true, 'msg' => 'Category deleted successfully.'];
+    }
+    return ['ok' => false, 'msg' => 'Failed to delete category.'];
 }
 
 // === MENU ITEMS ===
@@ -77,4 +110,5 @@ function toggleItemAvailability(PDO $pdo, int $itemID, int $status): bool {
     $stmt = $pdo->prepare("UPDATE menu_item SET IsAvailable = ? WHERE ItemID = ?");
     return $stmt->execute([$status, $itemID]);
 }
+
 ?>

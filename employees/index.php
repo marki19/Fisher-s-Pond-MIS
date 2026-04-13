@@ -80,7 +80,7 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
     <meta charset="UTF-8">
     <title>Fisher's Pond Kiosk</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="employees/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="kiosk-container">
