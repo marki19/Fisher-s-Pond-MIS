@@ -26,13 +26,21 @@ $stmt = $pdo->query("
 ");
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$settingsStmt = $pdo->query("SELECT key_name, key_value FROM store_settings");
+$storeSettings = [];
+while ($row = $settingsStmt->fetch(PDO::FETCH_ASSOC)) {
+    $storeSettings[$row['key_name']] = $row['key_value'];
+}
+$storeName = $storeSettings['store_name'] ?? "Fisher's Pond";
+$orderTaxRate = (float)($storeSettings['order_tax_rate'] ?? 0.12);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orders History - Fisher's Pond</title>
+    <title>Orders History - <?= htmlspecialchars($storeName) ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
@@ -85,15 +93,16 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <div class="receipt-body" id="receiptContent">
                 <div class="receipt-header">
-                    <strong>Fisher's Pond</strong><br>
+                    <strong><?= htmlspecialchars($storeName) ?></strong><br>
                     <span id="r_date"></span><br>
                     Cashier: <span id="r_cashier"></span><br>
-                    Status: <span id="r_status"></span>
+                    Status: <span id="r_status"></span><br>
+                    <span id="r_payment_info"></span>
                 </div>
                 <div id="r_items"></div>
                 <div class="receipt-totals">
                     <div class="receipt-item"><span>Subtotal</span><span id="r_subtotal"></span></div>
-                    <div class="receipt-item"><span>Tax (12%)</span><span id="r_tax"></span></div>
+                    <div class="receipt-item"><span>Tax (<?= $orderTaxRate * 100 ?>%)</span><span id="r_tax"></span></div>
                     <div class="receipt-item receipt-total-bold"><span>GRAND TOTAL</span><span id="r_total"></span></div>
                 </div>
             </div>
@@ -147,6 +156,17 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     document.getElementById('r_date').innerText = o.OrderDate;
                     document.getElementById('r_cashier').innerText = (o.FirstName || 'Admin') + ' ' + (o.LastName || '');
                     document.getElementById('r_status').innerText = o.Status;
+                    
+                    let payInfo = 'Mode: ' + (o.PaymentMode || 'Cash');
+                    if (o.PaymentMode !== 'Cash') {
+                        if (o.PaymentPlatform) {
+                            payInfo = 'Payment: ' + o.PaymentMode + ' (' + o.PaymentPlatform + ')';
+                        }
+                        if (o.ReferenceNumber) {
+                            payInfo += '<br>Ref #: ' + o.ReferenceNumber;
+                        }
+                    }
+                    document.getElementById('r_payment_info').innerHTML = payInfo;
                     
                     const itemsDiv = document.getElementById('r_items');
                     itemsDiv.innerHTML = '';

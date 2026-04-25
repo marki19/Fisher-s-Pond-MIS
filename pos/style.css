@@ -23,6 +23,8 @@
     padding: 0;
     box-sizing: border-box;
 }
+body { text-transform: capitalize; }
+input, select, textarea, button { text-transform: capitalize; }
 
 body {
     margin: 0;

@@ -51,12 +51,24 @@ try {
         $subtotal += ((float)$dbItem['Price'] * $qty);
     }
     
-    $tax = $subtotal * 0.12;
+    $stmtSetting = $pdo->query("SELECT key_value FROM store_settings WHERE key_name = 'order_tax_rate'");
+    $taxRateRaw = $stmtSetting->fetchColumn();
+    $orderTaxRate = $taxRateRaw !== false ? (float)$taxRateRaw : 0.12;
+
+    $paymentMode = $input['payment_mode'] ?? 'Cash';
+    $paymentPlatform = ($paymentMode === 'Online Payment') ? ($input['payment_platform'] ?? null) : null;
+    $refNumber = $input['reference_number'] ?? null;
+    
+    if ($paymentMode !== 'Cash' && empty($refNumber)) {
+        throw new Exception("Reference Number is required for online transactions.");
+    }
+
+    $tax = $subtotal * $orderTaxRate;
     $grandTotal = $subtotal + $tax;
 
     // Insert Order
-    $stmt = $pdo->prepare("INSERT INTO orders (StaffID, SubTotal, Tax, GrandTotal, Status) VALUES (?, ?, ?, ?, 'Completed')");
-    $stmt->execute([$staffID, $subtotal, $tax, $grandTotal]);
+    $stmt = $pdo->prepare("INSERT INTO orders (StaffID, SubTotal, Tax, GrandTotal, Status, PaymentMode, ReferenceNumber, PaymentPlatform) VALUES (?, ?, ?, ?, 'Completed', ?, ?, ?)");
+    $stmt->execute([$staffID, $subtotal, $tax, $grandTotal, $paymentMode, $refNumber, $paymentPlatform]);
     $orderID = $pdo->lastInsertId();
 
     // Insert Order Items

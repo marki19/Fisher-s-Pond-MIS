@@ -83,27 +83,41 @@ function getMenuItem(PDO $pdo, int $itemID): ?array {
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-function addMenuItem(PDO $pdo, array $data): bool {
-    $sql = "INSERT INTO menu_item (CategoryID, ItemName, Price, IsAvailable) VALUES (?, ?, ?, ?)";
-    $stmt = $pdo->prepare($sql);
-    return $stmt->execute([
-        $data['CategoryID'],
-        trim($data['ItemName']),
-        $data['Price'],
-        $data['IsAvailable'] ?? 1
-    ]);
-}
-
-function updateMenuItem(PDO $pdo, int $itemID, array $data): bool {
-    $sql = "UPDATE menu_item SET CategoryID = ?, ItemName = ?, Price = ?, IsAvailable = ? WHERE ItemID = ?";
+function addMenuItem(PDO $pdo, array $data, ?string $imagePath = null): bool {
+    $sql = "INSERT INTO menu_item (CategoryID, ItemName, Price, IsAvailable, ImagePath) VALUES (?, ?, ?, ?, ?)";
     $stmt = $pdo->prepare($sql);
     return $stmt->execute([
         $data['CategoryID'],
         trim($data['ItemName']),
         $data['Price'],
         $data['IsAvailable'] ?? 1,
-        $itemID
+        $imagePath
     ]);
+}
+
+function updateMenuItem(PDO $pdo, int $itemID, array $data, ?string $imagePath = null): bool {
+    if ($imagePath !== null) {
+        $sql = "UPDATE menu_item SET CategoryID = ?, ItemName = ?, Price = ?, IsAvailable = ?, ImagePath = ? WHERE ItemID = ?";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            $data['CategoryID'],
+            trim($data['ItemName']),
+            $data['Price'],
+            $data['IsAvailable'] ?? 1,
+            $imagePath,
+            $itemID
+        ]);
+    } else {
+        $sql = "UPDATE menu_item SET CategoryID = ?, ItemName = ?, Price = ?, IsAvailable = ? WHERE ItemID = ?";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            $data['CategoryID'],
+            trim($data['ItemName']),
+            $data['Price'],
+            $data['IsAvailable'] ?? 1,
+            $itemID
+        ]);
+    }
 }
 
 function toggleItemAvailability(PDO $pdo, int $itemID, int $status): bool {

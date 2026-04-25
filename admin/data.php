@@ -39,8 +39,8 @@ function addEmployee(PDO $pdo, array $d): void {
     $sql = "INSERT INTO employee (FirstName, LastName, BirthDate, Email, ContactNumber, PositionID, Username)
             VALUES (:fn, :ln, :bd, :em, :cn, :pid, :un)";
     $pdo->prepare($sql)->execute([
-        ':fn'  => $d['FirstName'],
-        ':ln'  => $d['LastName'],
+        ':fn'  => ucwords(trim($d['FirstName'])),
+        ':ln'  => ucwords(trim($d['LastName'])),
         ':bd'  => $d['BirthDate'],
         ':em'  => $d['Email'],
         ':cn'  => $d['ContactNumber'],
@@ -60,8 +60,8 @@ function updateEmployee(PDO $pdo, array $d): void {
                 Email=:em, ContactNumber=:cn, PositionID=:pid, Username=:un
             WHERE staffID=:id";
     $pdo->prepare($sql)->execute([
-        ':fn'  => $d['FirstName'],
-        ':ln'  => $d['LastName'],
+        ':fn'  => ucwords(trim($d['FirstName'])),
+        ':ln'  => ucwords(trim($d['LastName'])),
         ':bd'  => $d['BirthDate'],
         ':em'  => $d['Email'],
         ':cn'  => $d['ContactNumber'],
@@ -118,5 +118,20 @@ function deactivateEmployee(PDO $pdo, int $staffID): void {
 
 function reactivateEmployee(PDO $pdo, int $staffID): void {
     $pdo->prepare("UPDATE employee SET IsActive = 1 WHERE staffID = ?")->execute([$staffID]);
+}
+
+function getPaymentPlatforms(PDO $pdo): array {
+    return $pdo->query("SELECT * FROM payment_platforms ORDER BY PlatformName ASC")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function addPaymentPlatform(PDO $pdo, string $name): void {
+    $name = ucwords(trim($name));
+    $stmt = $pdo->prepare("INSERT IGNORE INTO payment_platforms (PlatformName) VALUES (?)");
+    $stmt->execute([$name]);
+}
+
+function togglePaymentPlatform(PDO $pdo, int $id, int $status): void {
+    $stmt = $pdo->prepare("UPDATE payment_platforms SET IsActive = ? WHERE PlatformID = ?");
+    $stmt->execute([$status, $id]);
 }
 ?>

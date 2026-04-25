@@ -70,6 +70,7 @@ function activateAccount(PDO $pdo, array $d): array {
     if ($d['password'] !== $d['confirm_password']) { return ['ok' => false, 'msg' => 'Passwords do not match.']; }
     if (strlen($d['password']) < 6) { return ['ok' => false, 'msg' => 'Password must be at least 6 characters.']; }
 
+    #BCRYPT Hashing Algorithm
     $hash = password_hash($d['password'], PASSWORD_DEFAULT);
     $pdo->prepare("UPDATE employee SET PasswordHash = ? WHERE staffID = ?")
         ->execute([$hash, $d['staffID']]);

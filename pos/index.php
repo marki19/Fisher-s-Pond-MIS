@@ -35,6 +35,9 @@ foreach ($menuItems as $item) {
         $groupedItems[$item['CategoryID']]['items'][] = $item;
     }
 }
+
+$stmtPlatforms = $pdo->query("SELECT PlatformName FROM payment_platforms WHERE IsActive = 1 ORDER BY PlatformName ASC");
+$paymentPlatforms = $stmtPlatforms->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -79,12 +82,20 @@ foreach ($menuItems as $item) {
                                             ]));
                                         ?>
                                         <div class="item-card <?= $item['IsAvailable'] ? '' : 'disabled-item' ?>" 
-                                             <?= $item['IsAvailable'] ? "onclick='addToCart($jsItem)'" : "" ?>>
-                                            <div class="item-name"><?= htmlspecialchars($item['ItemName']) ?></div>
-                                            <div class="item-price">₱<?= number_format($item['Price'], 2) ?></div>
-                                            <?php if (!$item['IsAvailable']): ?>
-                                                <div class="text-danger-sm-bold mt-4">Not Available</div>
+                                             <?= $item['IsAvailable'] ? "onclick='addToCart($jsItem)'" : "" ?>
+                                             style="position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
+                                            <?php if (!empty($item['ImagePath'])): ?>
+                                                <img src="<?= htmlspecialchars($item['ImagePath']) ?>" alt="<?= htmlspecialchars($item['ItemName']) ?>" style="width: 100%; height: 120px; object-fit: cover; border-bottom: 1px solid var(--border-color);">
+                                            <?php else: ?>
+                                                <div style="width: 100%; height: 120px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.9rem; border-bottom: 1px solid var(--border-color);">No Image</div>
                                             <?php endif; ?>
+                                            <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                                                <div class="item-name" style="margin-bottom: 8px;"><?= htmlspecialchars($item['ItemName']) ?></div>
+                                                <div class="item-price">₱<?= number_format($item['Price'], 2) ?></div>
+                                                <?php if (!$item['IsAvailable']): ?>
+                                                    <div class="text-danger-sm-bold mt-4">Not Available</div>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -140,12 +151,40 @@ foreach ($menuItems as $item) {
             </div>
             
             <div class="form-group-inline mb-20">
-                <label>Amount Tendered (Cash)</label>
-                <input type="number" step="0.01" min="0" id="pay_Amount" class="form-input" style="font-size: 1.5rem; font-weight:bold; height: 60px;" placeholder="0.00" onkeyup="calculateChange()">
+                <label>Payment Mode</label>
+                <select id="pay_Mode" class="form-input" style="font-weight:bold; height: 50px;" onchange="togglePaymentMode()">
+                    <option value="Cash">Cash</option>
+                    <option value="Online Payment">Online Payment</option>
+                </select>
             </div>
             
-            <div class="flex-col-end" style="align-items: flex-start; margin-bottom: 20px;">
-                <div style="font-size: 1.1rem;">Change Due: <strong id="pay_Change" style="font-size:1.5rem; color:var(--success);">₱0.00</strong></div>
+            <div id="cashFields">
+                <div class="form-group-inline mb-20">
+                    <label>Amount Tendered (Cash)</label>
+                    <input type="number" step="0.01" min="0" id="pay_Amount" class="form-input" style="font-size: 1.5rem; font-weight:bold; height: 60px;" placeholder="0.00" onkeyup="calculateChange()">
+                </div>
+                
+                <div class="flex-col-end" style="align-items: flex-start; margin-bottom: 20px;">
+                    <div style="font-size: 1.1rem;">Change Due: <strong id="pay_Change" style="font-size:1.5rem; color:var(--success);">₱0.00</strong></div>
+                </div>
+            </div>
+
+            <div id="onlineFields" class="hidden">
+                <div class="form-group-inline mb-20">
+                    <label>Platform</label>
+                    <select id="pay_Platform" class="form-input" style="font-weight:bold; height: 50px;">
+                        <?php foreach($paymentPlatforms as $pl): ?>
+                            <option value="<?= htmlspecialchars($pl['PlatformName']) ?>"><?= htmlspecialchars($pl['PlatformName']) ?></option>
+                        <?php endforeach; ?>
+                        <?php if(empty($paymentPlatforms)): ?>
+                            <option value="Online">Online</option>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                <div class="form-group-inline mb-20">
+                    <label>Reference Number</label>
+                    <input type="text" id="pay_Ref" class="form-input" style="font-size: 1.2rem; font-weight:bold; height: 60px;" placeholder="Enter reference ID..." onkeyup="calculateChange()">
+                </div>
             </div>
 
             <button type="button" id="btnConfirmPay" class="btn btn-pay" style="margin-top:0;" onclick="processCheckout()" disabled>Confirm Payment</button>
@@ -277,23 +316,47 @@ foreach ($menuItems as $item) {
                 return;
             }
             document.getElementById('pay_grandTotal').innerText = '₱' + window.currentGrandTotal.toFixed(2);
+            document.getElementById('pay_Mode').value = 'Cash';
             document.getElementById('pay_Amount').value = '';
+            document.getElementById('pay_Ref').value = '';
             document.getElementById('pay_Change').innerText = '₱0.00';
+            togglePaymentMode();
             document.getElementById('btnConfirmPay').disabled = true;
             document.getElementById('paymentModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('pay_Amount').focus(), 100);
         }
 
-        function calculateChange() {
-            const tendered = parseFloat(document.getElementById('pay_Amount').value) || 0;
-            const diff = tendered - window.currentGrandTotal;
-            const btn = document.getElementById('btnConfirmPay');
-            if (diff >= 0) {
-                document.getElementById('pay_Change').innerText = '₱' + diff.toFixed(2);
-                btn.disabled = false;
+        function togglePaymentMode() {
+            const mode = document.getElementById('pay_Mode').value;
+            if (mode === 'Cash') {
+                document.getElementById('cashFields').classList.remove('hidden');
+                document.getElementById('onlineFields').classList.add('hidden');
+                setTimeout(() => document.getElementById('pay_Amount').focus(), 50);
             } else {
-                document.getElementById('pay_Change').innerText = 'Insufficient';
-                btn.disabled = true;
+                document.getElementById('cashFields').classList.add('hidden');
+                document.getElementById('onlineFields').classList.remove('hidden');
+                setTimeout(() => document.getElementById('pay_Ref').focus(), 50);
+            }
+            calculateChange();
+        }
+
+        function calculateChange() {
+            const mode = document.getElementById('pay_Mode').value;
+            const btn = document.getElementById('btnConfirmPay');
+            
+            if (mode === 'Cash') {
+                const tendered = parseFloat(document.getElementById('pay_Amount').value) || 0;
+                const diff = tendered - window.currentGrandTotal;
+                if (diff >= 0) {
+                    document.getElementById('pay_Change').innerText = '₱' + diff.toFixed(2);
+                    btn.disabled = false;
+                } else {
+                    document.getElementById('pay_Change').innerText = 'Insufficient';
+                    btn.disabled = true;
+                }
+            } else {
+                const ref = document.getElementById('pay_Ref').value.trim();
+                btn.disabled = (ref.length === 0);
             }
         }
 
@@ -307,7 +370,12 @@ foreach ($menuItems as $item) {
                 const response = await fetch('checkout.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: cart })
+                    body: JSON.stringify({ 
+                        items: cart,
+                        payment_mode: document.getElementById('pay_Mode').value,
+                        payment_platform: document.getElementById('pay_Platform').value,
+                        reference_number: document.getElementById('pay_Ref').value.trim()
+                    })
                 });
                 
                 const data = await response.json();

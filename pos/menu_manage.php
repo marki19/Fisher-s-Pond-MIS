@@ -31,8 +31,25 @@ $msgType = 'error';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
+    $imagePath = null;
+    if (isset($_FILES['Image']) && $_FILES['Image']['error'] === 0) {
+        $file = $_FILES['Image'];
+        $check = getimagesize($file['tmp_name']);
+        if ($check !== false) {
+            $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (in_array($check['mime'], $allowed)) {
+                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                $fileName = uniqid() . "." . $ext;
+                $path = "uploads/" . $fileName;
+                if (move_uploaded_file($file['tmp_name'], $path)) {
+                    $imagePath = $path;
+                }
+            }
+        }
+    }
+    
     if ($action === 'add_item') {
-        if (addMenuItem($pdo, $_POST)) {
+        if (addMenuItem($pdo, $_POST, $imagePath)) {
             $msg = "Item added successfully.";
             $msgType = 'success';
         } else {
@@ -40,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'edit_item') {
         $itemID = (int)$_POST['ItemID'];
-        if (updateMenuItem($pdo, $itemID, $_POST)) {
+        if (updateMenuItem($pdo, $itemID, $_POST, $imagePath)) {
             $msg = "Item updated successfully.";
             $msgType = 'success';
         } else {
@@ -153,6 +170,7 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
                                         <th>Item Name</th>
                                         <th>Category</th>
                                         <th>Price</th>
+                                        <th>Image</th>
                                         <th>Status</th>
                                         <th style="text-align: right;">Actions</th>
                                     </tr>
@@ -163,6 +181,13 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
                                             <td class="text-bold"><?= htmlspecialchars($item['ItemName']) ?></td>
                                             <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color);"><?= htmlspecialchars($item['CategoryName']) ?></span></td>
                                             <td class="item-total-bold text-primary">₱<?= number_format($item['Price'], 2) ?></td>
+                                            <td>
+                                                <?php if (!empty($item['ImagePath'])): ?>
+                                                    <img src="<?= htmlspecialchars($item['ImagePath']) ?>" alt="Menu Image" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                                <?php else: ?>
+                                                    <div style="width: 40px; height: 40px; background: #e2e8f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748b;">No Img</div>
+                                                <?php endif; ?>
+                                            </td>
                                             <td>
                                                 <?= $item['IsAvailable'] == 1 ? '<span class="status-badge status-Completed">Available</span>' : '<span class="status-badge status-Voided">Disabled</span>' ?>
                                             </td>
@@ -241,7 +266,7 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
         <div class="modal">
             <button class="modal-close" onclick="document.getElementById('addModal').classList.add('hidden')">&times;</button>
             <h3>Add Menu Item</h3>
-            <form method="POST" class="mt-20">
+            <form method="POST" class="mt-20" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add_item">
 
                 <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
@@ -280,6 +305,18 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
                     </div>
                 </div>
 
+                <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-dark); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">3. Image</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group-inline mb-15">
+                            <label>Upload Menu Image (Optional)</label>
+                            <input type="file" name="Image" id="addImageInput" accept="image/*" class="form-input">
+                            <div id="addMessage" style="margin-top: 5px; font-size: 0.85rem;"></div>
+                            <div id="addPreview" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-clock-in btn-full-width">Register New Item</button>
             </form>
         </div>
@@ -290,7 +327,7 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
         <div class="modal">
             <button class="modal-close" onclick="document.getElementById('editModal').classList.add('hidden')">&times;</button>
             <h3>Edit Menu Item</h3>
-            <form method="POST" class="mt-20">
+            <form method="POST" class="mt-20" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit_item">
                 <input type="hidden" name="ItemID" id="edit_ItemID">
                 
@@ -325,6 +362,18 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
                                 <option value="1">Available for Order</option>
                                 <option value="0">Disabled / Out of Stock</option>
                             </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-dark); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">3. Image</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group-inline mb-15">
+                            <label>Update Menu Image (Leave empty to keep current)</label>
+                            <input type="file" name="Image" id="editImageInput" accept="image/*" class="form-input">
+                            <div id="editMessage" style="margin-top: 5px; font-size: 0.85rem;"></div>
+                            <div id="editPreview" style="margin-top: 10px;"></div>
                         </div>
                     </div>
                 </div>
@@ -369,6 +418,54 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
             document.getElementById('editCatModal').classList.remove('hidden');
             document.getElementById('editCatModal').style.display = 'flex';
         }
+
+        function setupImagePreview(inputId, messageId, previewId) {
+            const input = document.getElementById(inputId);
+            const message = document.getElementById(messageId);
+            const preview = document.getElementById(previewId);
+
+            if (!input) return;
+
+            input.addEventListener("change", function () {
+                const file = this.files[0];
+                message.textContent = "";
+                preview.innerHTML = "";
+
+                if (!file) return;
+
+                // preview
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.innerHTML = `<img src="${e.target.result}" style="max-width: 100px; max-height: 100px; border-radius: 4px; border: 1px solid var(--border-color); object-fit: cover;">`;
+                };
+                reader.readAsDataURL(file);
+
+                const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+                const maxSize = 5 * 1024 * 1024;
+
+                if (!allowed.includes(file.type)) {
+                    message.textContent = "Invalid file type";
+                    message.style.color = "red";
+                    this.value = "";
+                    preview.innerHTML = "";
+                    return;
+                }
+
+                if (file.size > maxSize) {
+                    message.textContent = "File too large (max 5MB)";
+                    message.style.color = "red";
+                    this.value = "";
+                    preview.innerHTML = "";
+                    return;
+                }
+
+                message.textContent = "Image looks valid";
+                message.style.color = "green";
+            });
+        }
+
+        setupImagePreview("addImageInput", "addMessage", "addPreview");
+        setupImagePreview("editImageInput", "editMessage", "editPreview");
     </script>
 
     <!-- Quick Clock Modal -->
