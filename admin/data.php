@@ -27,7 +27,7 @@ function getAttendanceRecords(PDO $pdo): array {
 }
 
 function getPositions(PDO $pdo): array {
-    return $pdo->query("SELECT PositionID, PositionName FROM position")->fetchAll(PDO::FETCH_ASSOC);
+    return $pdo->query("SELECT PositionID, PositionName, BaseRate FROM position ORDER BY PositionID ASC")->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function addEmployee(PDO $pdo, array $d): void {
@@ -93,8 +93,8 @@ function updateAdminAccount(PDO $pdo, string $currentUsername, array $d): array 
         if ($d['new_password'] !== $d['confirm_password']) {
             return ['ok' => false, 'msg' => 'New passwords do not match.'];
         }
-        if (strlen($d['new_password']) < 6) {
-            return ['ok' => false, 'msg' => 'New password must be at least 6 characters.'];
+        if (strlen($d['new_password']) < 8) {
+            return ['ok' => false, 'msg' => 'New password must be at least 8 characters.'];
         }
         $newPassHash = password_hash($d['new_password'], PASSWORD_DEFAULT);
     }
@@ -110,6 +110,75 @@ function updateAdminAccount(PDO $pdo, string $currentUsername, array $d): array 
     $stmt->execute([$newUsername, $newPassHash, $currentUsername]);
 
     return ['ok' => true, 'msg' => '✅ Admin account updated successfully!', 'newUsername' => $newUsername];
+}
+
+function updateOtherAdminAccount(PDO $pdo, int $adminId, array $d): array {
+    $newUsername = trim($d['manage_username']);
+    if (empty($newUsername)) return ['ok' => false, 'msg' => 'Username cannot be empty.'];
+    
+    // Check if new username exists already on another row
+    $check = $pdo->prepare("SELECT AdminID FROM admin_users WHERE Username = ? AND AdminID != ?");
+    $check->execute([$newUsername, $adminId]);
+    if ($check->fetch()) return ['ok' => false, 'msg' => 'That username is already taken.'];
+
+    $role = $d['manage_role'] ?? 'Admin';
+    
+    if (!empty($d['manage_password'])) {
+        if (strlen($d['manage_password']) < 8) {
+            return ['ok' => false, 'msg' => 'New password must be at least 8 characters.'];
+        }
+        $newPassHash = password_hash($d['manage_password'], PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("UPDATE admin_users SET Username = ?, PasswordHash = ?, AdminRole = ? WHERE AdminID = ?");
+        $stmt->execute([$newUsername, $newPassHash, $role, $adminId]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE admin_users SET Username = ?, AdminRole = ? WHERE AdminID = ?");
+        $stmt->execute([$newUsername, $role, $adminId]);
+    }
+
+    return ['ok' => true, 'msg' => '✅ Admin account managed successfully!'];
+}
+
+function deleteAdminAccount(PDO $pdo, int $adminId): array {
+    // Check if it's the last admin
+    $check = $pdo->query("SELECT COUNT(*) FROM admin_users")->fetchColumn();
+    if ($check <= 1) {
+        return ['ok' => false, 'msg' => 'Cannot delete the last admin account.'];
+    }
+    
+    $stmt = $pdo->prepare("DELETE FROM admin_users WHERE AdminID = ?");
+    $stmt->execute([$adminId]);
+    
+    return ['ok' => true, 'msg' => 'Admin account deleted.'];
+}
+
+function getAdminUsers(PDO $pdo): array {
+    return $pdo->query("SELECT AdminID, Username, AdminRole FROM admin_users ORDER BY AdminID ASC")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function addAdminUser(PDO $pdo, array $d): array {
+    $username = trim($d['Username'] ?? '');
+    $password = $d['Password'] ?? '';
+    $role = $d['AdminRole'] ?? 'Admin';
+    
+    if (empty($username) || empty($password)) {
+        return ['ok' => false, 'msg' => 'Username and Password are required.'];
+    }
+    if (strlen($password) < 8) {
+        return ['ok' => false, 'msg' => 'Password must be at least 8 characters.'];
+    }
+    
+    // Check if exists
+    $check = $pdo->prepare("SELECT AdminID FROM admin_users WHERE Username = ?");
+    $check->execute([$username]);
+    if ($check->fetch()) {
+        return ['ok' => false, 'msg' => 'Username already exists.'];
+    }
+    
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("INSERT INTO admin_users (Username, PasswordHash, AdminRole) VALUES (?, ?, ?)");
+    $stmt->execute([$username, $hash, $role]);
+    
+    return ['ok' => true, 'msg' => '✅ Admin account added successfully.'];
 }
 
 function deactivateEmployee(PDO $pdo, int $staffID): void {

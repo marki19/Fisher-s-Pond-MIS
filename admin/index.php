@@ -12,6 +12,10 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
+$isSuperAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true && ($_SESSION['admin_role'] ?? '') === 'SuperAdmin';
+
+
+
 $tab = $_GET['tab'] ?? 'active';
 
 if ($tab === 'active') {
@@ -22,6 +26,13 @@ if ($tab === 'active') {
     $attendance = getAttendanceRecords($pdo);
 } elseif ($tab === 'platforms') {
     $platforms = getPaymentPlatforms($pdo);
+} elseif ($tab === 'settings') {
+    $stmtSettings = $pdo->query("SELECT key_name, key_value FROM store_settings");
+    $storeSettings = [];
+    while ($row = $stmtSettings->fetch(PDO::FETCH_ASSOC)) {
+        $storeSettings[$row['key_name']] = $row['key_value'];
+    }
+    $adminUsers = getAdminUsers($pdo);
 }
 
 $positions = getPositions($pdo);
@@ -35,35 +46,45 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel</title>
+    <title>Admin Panel | Fisher's Pond Seafood and Grill</title>
     <?php if ($tab === 'attendance'): ?>
     <meta http-equiv="refresh" content="60">
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="sidebar">
-        <div class="sidebar-brand">Fisher's Pond</div>
+        <div class="sidebar-brand" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px 10px; text-align: center;">
+            <img src="../assets/fishers_pond_seafood_and_grill.jpg" alt="Fisher's Pond Seafood and Grill Logo" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: block; border: 2px solid #1a7aad; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <div style="line-height: 1.2; font-size: 1rem;">Fisher's Pond<br><span style="font-size: 0.8rem; font-weight: 400; opacity: 0.9;">Seafood and Grill</span></div>
+        </div>
         <div class="sidebar-nav">
+            <div class="sidebar-heading">SuperAdmin Access</div>
             <a href="index.php" class="<?= in_array($tab, ['active', 'deactivated', 'attendance']) ? 'active' : '' ?>">Employees</a>
+            <?php if ($isSuperAdmin): ?>
             <a href="?tab=settings" class="<?= $tab === 'settings' ? 'active' : '' ?>">Admin Settings</a>
-            <?php if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): ?>
+            <a href="?tab=platforms" class="<?= $tab === 'platforms' ? 'active' : '' ?>">Payment Platforms</a>
+            <?php endif; ?>
+
+            <?php if ($isSuperAdmin): ?>
                 <div class="sidebar-divider"></div>
-                <div class="sidebar-heading">SuperAdmin Access</div>
-                <a href="?tab=superadmin&view=pos" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'pos') ? 'active' : '' ?>">Cashier POS</a>
-                <a href="?tab=superadmin&view=orders" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'orders') ? 'active' : '' ?>">Orders</a>
-                <a href="?tab=superadmin&view=dashboard" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'dashboard') ? 'active' : '' ?>">POS Analytics</a>
+                <div class="sidebar-heading">Cashier Operations</div>
+                <a href="?tab=superadmin&view=pos" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'pos') ? 'active' : '' ?>">Order Terminal</a>
+
+                <div class="sidebar-divider"></div>
+                <div class="sidebar-heading">Manager Operations</div>
+                <a href="?tab=superadmin&view=orders" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'orders') ? 'active' : '' ?>">Order History</a>
+                <a href="?tab=superadmin&view=dashboard" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'dashboard') ? 'active' : '' ?>">Sales Report</a>
                 <a href="?tab=superadmin&view=menu" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'menu') ? 'active' : '' ?>">Menu Management</a>
-                <a href="?tab=superadmin&view=payroll" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'payroll') ? 'active' : '' ?>">Payroll Kiosk</a>
-                <a href="?tab=platforms" class="<?= $tab === 'platforms' ? 'active' : '' ?>">Payment Platforms</a>
+                <a href="?tab=superadmin&view=payroll" class="<?= ($tab === 'superadmin' && ($_GET['view'] ?? '') === 'payroll') ? 'active' : '' ?>">Payroll</a>
                 <div class="sidebar-divider"></div>
             <?php endif; ?>
             <a href="../admin/adminLogOut.php" class="logout danger-text">Log Out</a>
         </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" <?= $tab === 'superadmin' ? 'style="padding: 0;"' : '' ?>>
         <div class="header" <?= $tab === 'superadmin' ? 'style="display: none;"' : '' ?>>
             <div>
                 <h1>Admin Dashboard</h1>
@@ -83,6 +104,8 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             <a href="?tab=attendance" class="tab-link <?= $tab === 'attendance' ? 'active-tab' : '' ?>">Attendance Records</a>
         </div>
         
+        <div class="admin-scroll-area" <?= $tab === 'superadmin' ? 'style="display: none;"' : '' ?>>
+        
         <?php if (!empty($msg)): ?>
             <div class="alert-base <?php echo $msgType === 'error' ? 'alert-error' : 'alert-success'; ?>">
                 <?= htmlspecialchars($msg) ?>
@@ -90,7 +113,7 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         <?php endif; ?>
 
         <?php if ($tab === 'active' || $tab === 'deactivated'): ?>
-        <table>
+        <table id="employeesTable">
             <thead>
                 <tr>
                     <th>Staff ID</th>
@@ -151,7 +174,7 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             </tbody>
         </table>
         <?php elseif ($tab === 'attendance'): ?>
-        <table>
+        <table id="attendanceTable">
             <thead>
                 <tr>
                     <th>Staff ID</th>
@@ -178,31 +201,100 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         </table>
         
         <?php elseif ($tab === 'settings'): ?>
-        <div class="settings-card">
-            <h2 class="card-title">Admin Account Settings</h2>
-            <form method="POST" action="action.php">
-                <input type="hidden" name="action" value="update_admin_account">
-                <div class="form-group">
-                    <label class="form-label-bold">Username</label>
-                    <input type="text" name="new_username" value="<?= htmlspecialchars($_SESSION['admin_username']) ?>" required class="input-full">
-                </div>
-                <div class="separator"></div>
-                <p class="text-sm-bold">Change Password (Optional)</p>
-                <div class="form-group">
-                    <input type="password" name="new_password" placeholder="New Password" class="input-full-mb">
-                </div>
-                <div class="form-group">
-                    <input type="password" name="confirm_password" placeholder="Confirm New Password" class="input-full">
-                </div>
-                <div class="separator"></div>
-                <p class="text-danger-bold">Current Password required to save changes</p>
-                <div class="form-group">
-                    <input type="password" name="current_password" placeholder="Current Password" required class="input-full">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full-mt">Save Settings</button>
-            </form>
+        <div class="header-actions" style="margin-bottom: 20px;">
+            <?php if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): ?>
+                <button class="btn btn-primary" onclick="openAddAdminModal()">+ Add Admin Account</button>
+                <button class="btn btn-secondary" onclick="openTaxModal()">Store & Tax Settings</button>
+            <?php endif; ?>
         </div>
         
+        <table id="adminUsersTable">
+            <thead>
+                <tr>
+                    <th>Admin ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($adminUsers as $au): ?>
+                <tr>
+                    <td><?= htmlspecialchars($au['AdminID']) ?></td>
+                    <td><?= htmlspecialchars($au['Username']) ?></td>
+                    <td><?= htmlspecialchars($au['AdminRole']) ?></td>
+                    <td>
+                        <div class="flex-row-gap">
+                        <?php if ($au['Username'] === $_SESSION['admin_username']): ?>
+                            <button class="btn btn-secondary" onclick="openEditAdminModal()">Edit My Account</button>
+                        <?php elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): ?>
+                            <button class="btn btn-secondary" onclick="openManageAdminModal('<?= htmlspecialchars($au['AdminID']) ?>', '<?= htmlspecialchars(addslashes($au['Username'])) ?>', '<?= htmlspecialchars($au['AdminRole']) ?>')">Manage</button>
+                            <form method="POST" action="action.php" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this Admin account? This cannot be undone.');">
+                                <input type="hidden" name="action" value="delete_admin">
+                                <input type="hidden" name="admin_id" value="<?= $au['AdminID'] ?>">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        <?php else: ?>
+                            <span class="text-muted-sm">Restricted</span>
+                        <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <?php if ($isSuperAdmin): ?>
+        <!-- Position Base Rate Management -->
+        <div style="margin-top: 40px;">
+            <div class="header" style="margin-bottom: 16px;">
+                <div>
+                    <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); margin: 0;">Position Base Rates</h2>
+                    <p class="subtitle" style="margin-top: 4px;">Hourly rates used in payroll computation for each position.</p>
+                </div>
+            </div>
+            <table id="baseRateTable">
+                <thead>
+                    <tr>
+                        <th>Position</th>
+                        <th>Current Rate (₱/hr)</th>
+                        <th>Update Rate</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($positions as $pos): ?>
+                    <tr>
+                        <td><strong><?= htmlspecialchars($pos['PositionName']) ?></strong></td>
+                        <td>
+                            <span class="status-active" style="font-size: 0.95rem; letter-spacing: 0;">
+                                ₱<?= number_format((float)($pos['BaseRate'] ?? 0), 2) ?>/hr
+                            </span>
+                        </td>
+                        <td>
+                            <form method="POST" action="action.php" class="inline-form flex-row-gap" style="align-items: center; gap: 10px;">
+                                <input type="hidden" name="action" value="update_base_rate">
+                                <input type="hidden" name="PositionID" value="<?= (int)$pos['PositionID'] ?>">
+                                <input type="number" name="BaseRate" step="0.01" min="0"
+                                       value="<?= htmlspecialchars(number_format((float)($pos['BaseRate'] ?? 0), 2, '.', '')) ?>"
+                                       required
+                                       style="width: 140px; padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 600; outline: none; transition: var(--transition); font-family: inherit; color: var(--text-dark);"
+                                       onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(14,116,144,0.12)'"
+                                       onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
+                                >
+                                <button type="submit" class="btn btn-primary btn-small">Save</button>
+                            </form>
+                        </td>
+                        <td>
+                            <span class="text-muted-sm">Position #<?= (int)$pos['PositionID'] ?></span>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+
         <?php elseif ($tab === 'platforms'): ?>
         <div class="settings-card" style="max-width: 800px; margin: 0 auto;">
             <h2 class="card-title">Manage Online Payment Platforms</h2>
@@ -255,7 +347,11 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             </table>
         </div>
         
-        <?php elseif ($tab === 'superadmin' && isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): 
+        <?php endif; ?>
+        
+        </div> <!-- End of admin-scroll-area -->
+        
+        <?php if ($tab === 'superadmin' && isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin'): 
             $view = $_GET['view'] ?? 'pos';
             $iframeSrc = '';
             if ($view === 'pos') $iframeSrc = '../pos/index.php';
@@ -264,7 +360,7 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             elseif ($view === 'menu') $iframeSrc = '../pos/menu_manage.php';
             elseif ($view === 'payroll') $iframeSrc = '../pos/payroll.php';
         ?>
-        <div style="height: 100vh; width: 100%; margin: -40px; padding: 0;">
+        <div style="height: 100vh; width: 100%; padding: 0;">
             <iframe src="<?= $iframeSrc ?>" width="100%" height="100%" frameborder="0" style="display: block;"></iframe>
         </div>
         <?php endif; ?>
@@ -278,50 +374,197 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                 <input type="hidden" name="action" value="save_employee">
                 <input type="hidden" name="staffID" id="empStaffID">
                 
-                <div class="form-group">
-                    <label>Username (Optional)</label>
-                    <input type="text" name="Username" id="empUsername">
-                </div>
-                
-                <div class="flex-row-gap">
-                    <div class="form-group flex-1">
-                        <label>First Name</label>
-                        <input type="text" name="FirstName" id="empFirstName" required>
+                <div class="modal-grid">
+                    <div class="modal-grid-column">
+                        <h3>Personal Details</h3>
+                        <div class="flex-row-gap">
+                            <div class="form-group flex-1">
+                                <label>First Name</label>
+                                <input type="text" name="FirstName" id="empFirstName" required>
+                            </div>
+                            <div class="form-group flex-1">
+                                <label>Last Name</label>
+                                <input type="text" name="LastName" id="empLastName" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Birth Date</label>
+                            <input type="date" name="BirthDate" id="empBirthDate" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" name="Email" id="empEmail" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Contact Number</label>
+                            <input type="tel" name="ContactNumber" id="empContactNumber" required>
+                        </div>
                     </div>
-                    <div class="form-group flex-1">
-                        <label>Last Name</label>
-                        <input type="text" name="LastName" id="empLastName" required>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Birth Date</label>
-                    <input type="date" name="BirthDate" id="empBirthDate" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="Email" id="empEmail" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Contact Number</label>
-                    <input type="tel" name="ContactNumber" id="empContactNumber" required>
-                </div>
+                    
+                    <div class="modal-grid-column">
+                        <h3>System Access</h3>
+                        <div class="form-group">
+                            <label>Position</label>
+                            <select name="PositionID" id="empPositionID" required>
+                                <option value="" disabled selected>-- Select a Role --</option>
+                                <?php foreach ($positions as $p): ?>
+                                <option value="<?= htmlspecialchars($p['PositionID']) ?>"><?= htmlspecialchars($p['PositionName']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-                <div class="form-group">
-                    <label>Position</label>
-                    <select name="PositionID" id="empPositionID" required>
-                        <option value="" disabled selected>-- Select a Role --</option>
-                        <?php foreach ($positions as $p): ?>
-                        <option value="<?= htmlspecialchars($p['PositionID']) ?>"><?= htmlspecialchars($p['PositionName']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                        <div class="form-group">
+                            <label>Username (Optional)</label>
+                            <input type="text" name="Username" id="empUsername">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="submitBtn">Save Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addAdminModal" class="modal">
+        <div class="modal-content">
+            <h2>Add Admin Account</h2>
+            <form method="POST" action="action.php">
+                <input type="hidden" name="action" value="add_admin">
+                <div class="modal-grid">
+                    <div class="modal-grid-column">
+                        <h3>Credentials</h3>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" name="Username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="Password" required>
+                        </div>
+                    </div>
+                    <div class="modal-grid-column">
+                        <h3>System Access</h3>
+                        <div class="form-group">
+                            <label>Role</label>
+                            <select name="AdminRole" required>
+                                <option value="SuperAdmin">SuperAdmin</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddAdminModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Admin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editAdminModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit My Account</h2>
+            <form method="POST" action="action.php">
+                <input type="hidden" name="action" value="update_admin_account">
+                <div class="modal-grid">
+                    <div class="modal-grid-column">
+                        <h3>Account Details</h3>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" name="new_username" value="<?= htmlspecialchars($_SESSION['admin_username'] ?? '') ?>" required>
+                        </div>
+                        <div class="separator" style="margin: 16px 0;"></div>
+                        <div class="form-group">
+                            <label class="text-danger-bold">Current Password required to save</label>
+                            <input type="password" name="current_password" required placeholder="Current Password">
+                        </div>
+                    </div>
+                    <div class="modal-grid-column">
+                        <h3>Security</h3>
+                        <div class="form-group">
+                            <label>New Password (Optional)</label>
+                            <input type="password" name="new_password" placeholder="New Password">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" name="confirm_password" placeholder="Confirm New Password">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditAdminModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="manageAdminModal" class="modal">
+        <div class="modal-content">
+            <h2>Manage Admin Account</h2>
+            <form method="POST" action="action.php">
+                <input type="hidden" name="action" value="manage_admin">
+                <input type="hidden" name="admin_id" id="manageAdminId">
+                <div class="modal-grid">
+                    <div class="modal-grid-column">
+                        <h3>Account Details</h3>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" name="manage_username" id="manageUsername" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Role</label>
+                            <select name="manage_role" id="manageRole" required>
+                                <option value="SuperAdmin">SuperAdmin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-grid-column">
+                        <h3>Security</h3>
+                        <div class="form-group">
+                            <label>New Password (Optional)</label>
+                            <input type="password" name="manage_password" placeholder="Leave blank to keep current password">
+                        </div>
+                        <p class="text-muted-sm" style="margin-top: 8px;">As a SuperAdmin, you can change this user's password directly without their current password.</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeManageAdminModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Admin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="taxModal" class="modal">
+        <div class="modal-content">
+            <h2>Store & Tax Settings</h2>
+            <form method="POST" action="action.php">
+                <input type="hidden" name="action" value="update_tax_settings">
+                <div class="form-group">
+                    <label>Store Logo (Preview)</label>
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+                        <img src="../assets/fishers_pond_seafood_and_grill.jpg" alt="Current Logo" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #1a7aad; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <input type="file" name="store_logo" accept="image/*" disabled>
+                    </div>
+                    <p class="text-muted-sm">* Logo uploading is currently handled manually (placeholder mode).</p>
+                </div>
+                <div class="form-group">
+                    <label>Order Tax Rate (VAT %)</label>
+                    <input type="number" step="0.01" min="0" max="100" name="order_tax_rate" value="<?= htmlspecialchars(($storeSettings['order_tax_rate'] ?? 0.12) * 100) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Payroll Tax Deduction (%)</label>
+                    <input type="number" step="0.01" min="0" max="100" name="payroll_tax_rate" value="<?= htmlspecialchars(($storeSettings['payroll_tax_rate'] ?? 0.05) * 100) ?>" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTaxModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Settings</button>
                 </div>
             </form>
         </div>
@@ -343,14 +586,31 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             document.getElementById('employeeModal').style.display = 'flex';
         }
 
-        function closeModal() {
-            document.getElementById('employeeModal').style.display = 'none';
+        function closeModal() { document.getElementById('employeeModal').style.display = 'none'; }
+        
+        function openAddAdminModal() { document.getElementById('addAdminModal').style.display = 'flex'; }
+        function closeAddAdminModal() { document.getElementById('addAdminModal').style.display = 'none'; }
+        
+        function openEditAdminModal() { document.getElementById('editAdminModal').style.display = 'flex'; }
+        function closeEditAdminModal() { document.getElementById('editAdminModal').style.display = 'none'; }
+        
+        function openManageAdminModal(id, un, role) {
+            document.getElementById('manageAdminId').value = id;
+            document.getElementById('manageUsername').value = un;
+            document.getElementById('manageRole').value = role;
+            document.getElementById('manageAdminModal').style.display = 'flex';
         }
+        function closeManageAdminModal() { document.getElementById('manageAdminModal').style.display = 'none'; }
+        
+        function openTaxModal() { document.getElementById('taxModal').style.display = 'flex'; }
+        function closeTaxModal() { document.getElementById('taxModal').style.display = 'none'; }
 
         window.onclick = function(event) {
-            if (event.target == document.getElementById('employeeModal')) {
-                closeModal();
-            }
+            if (event.target == document.getElementById('employeeModal')) closeModal();
+            if (event.target == document.getElementById('addAdminModal')) closeAddAdminModal();
+            if (event.target == document.getElementById('editAdminModal')) closeEditAdminModal();
+            if (event.target == document.getElementById('manageAdminModal')) closeManageAdminModal();
+            if (event.target == document.getElementById('taxModal')) closeTaxModal();
         }
     </script>
     
@@ -384,6 +644,65 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         document.onkeypress = resetAdminIdleTimer;
         document.ontouchstart = resetAdminIdleTimer;
         document.onclick = resetAdminIdleTimer;
+    </script>
+
+    <script>
+        function paginateTable(tableId, rowsPerPage) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            if (rows.length <= rowsPerPage) return;
+            
+            const totalPages = Math.ceil(rows.length / rowsPerPage);
+            let currentPage = 1;
+            
+            const existingControls = table.nextElementSibling;
+            if (existingControls && existingControls.classList.contains('pagination-controls')) {
+                existingControls.remove();
+            }
+
+            const controls = document.createElement('div');
+            controls.className = 'pagination-controls';
+            
+            const render = () => {
+                rows.forEach((row, index) => {
+                    row.classList.toggle('hidden-row', index < (currentPage - 1) * rowsPerPage || index >= currentPage * rowsPerPage);
+                });
+                
+                controls.innerHTML = '';
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.innerText = 'Prev';
+                prevBtn.disabled = currentPage === 1;
+                prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; render(); } };
+                controls.appendChild(prevBtn);
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageBtn = document.createElement('button');
+                    pageBtn.innerText = i;
+                    if (i === currentPage) pageBtn.classList.add('active');
+                    pageBtn.onclick = () => { currentPage = i; render(); };
+                    controls.appendChild(pageBtn);
+                }
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.innerText = 'Next';
+                nextBtn.disabled = currentPage === totalPages;
+                nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; render(); } };
+                controls.appendChild(nextBtn);
+            };
+            
+            table.parentNode.insertBefore(controls, table.nextSibling);
+            render();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            paginateTable('employeesTable', 10);
+            paginateTable('attendanceTable', 10);
+            paginateTable('adminUsersTable', 10);
+        });
     </script>
 </body>
 </html>

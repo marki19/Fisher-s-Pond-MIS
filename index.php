@@ -44,13 +44,14 @@ unset($_SESSION['logout_msg']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fisher's Pond — Login</title>
+    <title>Fisher's Pond Seafood and Grill — Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
 <body class="login-body">
     <div class="login-card">
-        <h1>Fisher's Pond</h1>
+        <img src="assets/fishers_pond_seafood_and_grill.jpg" alt="Fisher's Pond Seafood and Grill Logo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 16px; border: 4px solid #1a7aad; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <h1 style="line-height: 1.1;">Fisher's Pond<br><span style="font-size: 1.5rem; font-weight: 500;">Seafood and Grill</span></h1>
         <p class="login-subtitle">System Login</p>
 
         <?php if ($error): ?>
@@ -65,7 +66,7 @@ unset($_SESSION['logout_msg']);
 
         <form method="POST" action="authAction.php">
             <div class="login-form-group">
-                <input type="text" name="login_id" placeholder="Username or Staff ID" required autofocus>
+                <input type="text" name="login_id" placeholder="Full Name or Username" required autofocus>
             </div>
             <div class="login-form-group">
                 <input type="password" name="password" placeholder="Password" required>

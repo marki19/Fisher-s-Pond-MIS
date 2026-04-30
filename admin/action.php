@@ -59,6 +59,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['admin_msg_type'] = $res['ok'] ? 'success' : 'error';
         header('Location: index.php?tab=settings');
         exit;
+    } elseif ($action === 'add_admin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+            $res = addAdminUser($pdo, $_POST);
+            $_SESSION['admin_msg'] = $res['msg'];
+            $_SESSION['admin_msg_type'] = $res['ok'] ? 'success' : 'error';
+        } else {
+            $_SESSION['admin_msg'] = 'Unauthorized access.';
+            $_SESSION['admin_msg_type'] = 'error';
+        }
+        header('Location: index.php?tab=settings');
+        exit;
+    } elseif ($action === 'manage_admin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+            $adminId = (int)($_POST['admin_id'] ?? 0);
+            if ($adminId > 0) {
+                $res = updateOtherAdminAccount($pdo, $adminId, $_POST);
+                $_SESSION['admin_msg'] = $res['msg'];
+                $_SESSION['admin_msg_type'] = $res['ok'] ? 'success' : 'error';
+                
+                // If they managed their own account, update session username in case they changed it
+                $stmt = $pdo->prepare("SELECT Username FROM admin_users WHERE AdminID = ?");
+                $stmt->execute([$adminId]);
+                $updatedAdmin = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($updatedAdmin && $_SESSION['admin_username'] === $_POST['manage_username']) {
+                    $_SESSION['admin_username'] = $updatedAdmin['Username'];
+                }
+            } else {
+                $_SESSION['admin_msg'] = 'Invalid Admin ID.';
+                $_SESSION['admin_msg_type'] = 'error';
+            }
+        } else {
+            $_SESSION['admin_msg'] = 'Unauthorized access.';
+            $_SESSION['admin_msg_type'] = 'error';
+        }
+        header('Location: index.php?tab=settings');
+        exit;
+    } elseif ($action === 'delete_admin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+            $adminId = (int)($_POST['admin_id'] ?? 0);
+            if ($adminId > 0) {
+                $res = deleteAdminAccount($pdo, $adminId);
+                $_SESSION['admin_msg'] = $res['msg'];
+                $_SESSION['admin_msg_type'] = $res['ok'] ? 'success' : 'error';
+                
+                // If they deleted themselves, log them out
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM admin_users WHERE Username = ?");
+                $stmt->execute([$_SESSION['admin_username']]);
+                if ($stmt->fetchColumn() == 0) {
+                    session_destroy();
+                    header('Location: ../index.php');
+                    exit;
+                }
+            } else {
+                $_SESSION['admin_msg'] = 'Invalid Admin ID.';
+                $_SESSION['admin_msg_type'] = 'error';
+            }
+        } else {
+            $_SESSION['admin_msg'] = 'Unauthorized access.';
+            $_SESSION['admin_msg_type'] = 'error';
+        }
+        header('Location: index.php?tab=settings');
+        exit;
     } elseif ($action === 'add_platform') {
         $name = $_POST['PlatformName'] ?? '';
         if (!empty($name)) {
@@ -77,6 +139,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_msg_type'] = 'success';
         }
         header('Location: index.php?tab=platforms');
+        exit;
+    } elseif ($action === 'update_tax_settings') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+            $orderTaxPct = (float)($_POST['order_tax_rate'] ?? 12);
+            $payrollTaxPct = (float)($_POST['payroll_tax_rate'] ?? 5);
+            
+            $orderTaxRate = $orderTaxPct / 100;
+            $payrollTaxRate = $payrollTaxPct / 100;
+            
+            $stmt = $pdo->prepare("INSERT INTO store_settings (key_name, key_value) VALUES ('order_tax_rate', ?) ON DUPLICATE KEY UPDATE key_value = ?");
+            $stmt->execute([$orderTaxRate, $orderTaxRate]);
+            
+            $stmt = $pdo->prepare("INSERT INTO store_settings (key_name, key_value) VALUES ('payroll_tax_rate', ?) ON DUPLICATE KEY UPDATE key_value = ?");
+            $stmt->execute([$payrollTaxRate, $payrollTaxRate]);
+            
+            $_SESSION['admin_msg'] = 'Tax settings updated successfully.';
+            $_SESSION['admin_msg_type'] = 'success';
+        } else {
+            $_SESSION['admin_msg'] = 'Unauthorized access.';
+            $_SESSION['admin_msg_type'] = 'error';
+        }
+        header('Location: index.php?tab=settings');
+        exit;
+    } elseif ($action === 'update_base_rate') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+            $positionId = (int)($_POST['PositionID'] ?? 0);
+            $baseRate   = (float)($_POST['BaseRate'] ?? 0);
+
+            if ($positionId > 0 && $baseRate >= 0) {
+                $stmt = $pdo->prepare("UPDATE position SET BaseRate = ? WHERE PositionID = ?");
+                $stmt->execute([$baseRate, $positionId]);
+                $_SESSION['admin_msg']      = 'Base rate updated successfully.';
+                $_SESSION['admin_msg_type'] = 'success';
+            } else {
+                $_SESSION['admin_msg']      = 'Invalid position or rate value.';
+                $_SESSION['admin_msg_type'] = 'error';
+            }
+        } else {
+            $_SESSION['admin_msg']      = 'Unauthorized access.';
+            $_SESSION['admin_msg_type'] = 'error';
+        }
+        header('Location: index.php?tab=settings');
         exit;
     }
 }

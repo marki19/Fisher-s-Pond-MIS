@@ -19,25 +19,42 @@ function unifiedLogin(PDO $pdo, string $login_id, string $password): array {
     }
 
     // 2. Check Staff
-    $stmt = $pdo->prepare("SELECT * FROM employee WHERE (staffID = ? OR Username = ?) AND (IsActive = 1 OR IsActive IS NULL)");
-    $stmt->execute([$login_id, $login_id]);
-    $employee = $stmt->fetch(PDO::FETCH_ASSOC);
+    $clean_login = str_replace(' ', '', strtolower($login_id));
 
-    if ($employee) {
-        if (empty($employee['PasswordHash'])) {
-            return ['ok' => false, 'msg' => 'Account not yet activated. Please activate your account first.'];
-        }
-        if (!password_verify($password, $employee['PasswordHash'])) {
-            return ['ok' => false, 'msg' => 'Incorrect password.'];
-        }
+    $stmt = $pdo->prepare("
+        SELECT * FROM employee 
+        WHERE (
+            REPLACE(LOWER(CONCAT(FirstName, LastName)), ' ', '') = ? 
+            OR Username = ?
+        ) AND (IsActive = 1 OR IsActive IS NULL)
+    ");
+    $stmt->execute([$clean_login, $login_id]);
+    $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $_SESSION['active_staffID'] = $employee['staffID'];
-        $_SESSION['active_name']    = $employee['FirstName'] . ' ' . $employee['LastName'];
-        $_SESSION['position_id']    = $employee['PositionID'];
-        return ['ok' => true, 'role' => 'staff', 'redirect' => 'employees/index.php'];
+    if (empty($employees)) {
+        return ['ok' => false, 'msg' => 'Invalid Name or Username.'];
     }
 
-    return ['ok' => false, 'msg' => 'Invalid Username or Staff ID.'];
+    $foundUnactivated = false;
+    foreach ($employees as $employee) {
+        if (empty($employee['PasswordHash'])) {
+            $foundUnactivated = true;
+            continue;
+        }
+
+        if (password_verify($password, $employee['PasswordHash'])) {
+            $_SESSION['active_staffID'] = $employee['staffID'];
+            $_SESSION['active_name']    = $employee['FirstName'] . ' ' . $employee['LastName'];
+            $_SESSION['position_id']    = $employee['PositionID'];
+            return ['ok' => true, 'role' => 'staff', 'redirect' => 'employees/index.php'];
+        }
+    }
+
+    if ($foundUnactivated) {
+        return ['ok' => false, 'msg' => 'Account not yet activated. Please activate your account first.'];
+    }
+
+    return ['ok' => false, 'msg' => 'Incorrect password.'];
 }
 
 function clockIn(PDO $pdo, string $staffID): string {
@@ -61,19 +78,21 @@ function clockOut(PDO $pdo, string $staffID): string {
 }
 
 function activateAccount(PDO $pdo, array $d): array {
-    $stmt = $pdo->prepare("SELECT * FROM employee WHERE staffID = ? AND Email = ? AND (IsActive = 1 OR IsActive IS NULL)");
-    $stmt->execute([$d['staffID'], $d['email']]);
+    $contactInfo = $d['contact_info'] ?? '';
+    
+    $stmt = $pdo->prepare("SELECT * FROM employee WHERE (Email = ? OR ContactNumber = ?) AND (IsActive = 1 OR IsActive IS NULL)");
+    $stmt->execute([$contactInfo, $contactInfo]);
     $emp = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$emp) { return ['ok' => false, 'msg' => 'Staff ID and Email do not match active employee.']; }
+    if (!$emp) { return ['ok' => false, 'msg' => 'Email or Contact Number does not match an active employee.']; }
     if (!empty($emp['PasswordHash'])) { return ['ok' => false, 'msg' => 'Account is already activated.']; }
     if ($d['password'] !== $d['confirm_password']) { return ['ok' => false, 'msg' => 'Passwords do not match.']; }
-    if (strlen($d['password']) < 6) { return ['ok' => false, 'msg' => 'Password must be at least 6 characters.']; }
+    if (strlen($d['password']) < 8) { return ['ok' => false, 'msg' => 'Password must be at least 8 characters.']; }
 
     #BCRYPT Hashing Algorithm
     $hash = password_hash($d['password'], PASSWORD_DEFAULT);
     $pdo->prepare("UPDATE employee SET PasswordHash = ? WHERE staffID = ?")
-        ->execute([$hash, $d['staffID']]);
+        ->execute([$hash, $emp['staffID']]);
     return ['ok' => true, 'msg' => '✅ Account activated! You can now log in.'];
 }
 
@@ -94,8 +113,8 @@ function updateMyAccount(PDO $pdo, string $staffID, array $d): array {
         if ($d['new_password'] !== $d['confirm_password']) {
             return ['ok' => false, 'msg' => 'New passwords do not match.'];
         }
-        if (strlen($d['new_password']) < 6) {
-            return ['ok' => false, 'msg' => 'New password must be at least 6 characters.'];
+        if (strlen($d['new_password']) < 8) {
+            return ['ok' => false, 'msg' => 'New password must be at least 8 characters.'];
         }
         $newPassHash = password_hash($d['new_password'], PASSWORD_DEFAULT);
     }

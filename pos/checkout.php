@@ -51,6 +51,29 @@ try {
         $subtotal += ((float)$dbItem['Price'] * $qty);
     }
     
+    // Process Discount
+    $discountID = null;
+    $discountAmount = 0.00;
+    if (!empty($input['discount_id'])) {
+        $discountID = (int)$input['discount_id'];
+        $stmtDisc = $pdo->prepare("SELECT DiscountType, DiscountValue FROM discounts WHERE DiscountID = ? AND IsActive = 1");
+        $stmtDisc->execute([$discountID]);
+        $disc = $stmtDisc->fetch(PDO::FETCH_ASSOC);
+        
+        if ($disc) {
+            if ($disc['DiscountType'] === 'Percentage') {
+                $discountAmount = $subtotal * ((float)$disc['DiscountValue'] / 100);
+            } else {
+                $discountAmount = (float)$disc['DiscountValue'];
+            }
+            if ($discountAmount > $subtotal) $discountAmount = $subtotal;
+        } else {
+            $discountID = null;
+        }
+    }
+    
+    $discountedSubtotal = $subtotal - $discountAmount;
+
     $stmtSetting = $pdo->query("SELECT key_value FROM store_settings WHERE key_name = 'order_tax_rate'");
     $taxRateRaw = $stmtSetting->fetchColumn();
     $orderTaxRate = $taxRateRaw !== false ? (float)$taxRateRaw : 0.12;
@@ -59,16 +82,22 @@ try {
     $paymentPlatform = ($paymentMode === 'Online Payment') ? ($input['payment_platform'] ?? null) : null;
     $refNumber = $input['reference_number'] ?? null;
     
+    $orderType = $input['order_type'] ?? 'Dine-in';
+    $tableNumber = $input['table_number'] ?? null;
+    if ($orderType !== 'Dine-in') {
+        $tableNumber = null;
+    }
+    
     if ($paymentMode !== 'Cash' && empty($refNumber)) {
         throw new Exception("Reference Number is required for online transactions.");
     }
 
-    $tax = $subtotal * $orderTaxRate;
-    $grandTotal = $subtotal + $tax;
+    $tax = $discountedSubtotal * $orderTaxRate;
+    $grandTotal = $discountedSubtotal + $tax;
 
     // Insert Order
-    $stmt = $pdo->prepare("INSERT INTO orders (StaffID, SubTotal, Tax, GrandTotal, Status, PaymentMode, ReferenceNumber, PaymentPlatform) VALUES (?, ?, ?, ?, 'Completed', ?, ?, ?)");
-    $stmt->execute([$staffID, $subtotal, $tax, $grandTotal, $paymentMode, $refNumber, $paymentPlatform]);
+    $stmt = $pdo->prepare("INSERT INTO orders (StaffID, SubTotal, Tax, GrandTotal, Status, PaymentMode, ReferenceNumber, PaymentPlatform, OrderType, TableNumber, DiscountID, DiscountAmount) VALUES (?, ?, ?, ?, 'Completed', ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$staffID, $subtotal, $tax, $grandTotal, $paymentMode, $refNumber, $paymentPlatform, $orderType, $tableNumber, $discountID, $discountAmount]);
     $orderID = $pdo->lastInsertId();
 
     // Insert Order Items

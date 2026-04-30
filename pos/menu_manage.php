@@ -111,7 +111,7 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Menu Management | Fisher's Pond POS</title>
+    <title>Menu Management | Fisher's Pond Seafood and Grill POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
 </head>
@@ -159,12 +159,22 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
                     
                     <!-- Left Column: Menu Items -->
                     <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
-                        <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
-                            <h3 style="font-size: 1.25rem;">Current Menu</h3>
+                        <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                                <h3 style="font-size: 1.25rem; margin: 0;">Current Menu</h3>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="text" id="menuSearch" class="form-input" placeholder="Search items..." style="margin: 0; padding: 6px 12px; font-size: 0.9rem; width: 200px; height: auto;" onkeyup="filterMenuTable()">
+                                    <select id="menuFilter" class="form-input" style="margin: 0; padding: 6px 12px; font-size: 0.9rem; width: auto; height: auto;" onchange="filterMenuTable()">
+                                        <option value="all">All Items</option>
+                                        <option value="available">Available Only</option>
+                                        <option value="unavailable">Unavailable Only</option>
+                                    </select>
+                                </div>
+                            </div>
                             <button class="btn btn-clock-in btn-small" onclick="document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addModal').style.display='flex';" style="margin:0;">+ Add New Item</button>
                         </div>
                         <div style="overflow-y: auto; flex: 1; min-height: 0;">
-                            <table class="data-table" style="width: 100%;">
+                            <table class="data-table" style="width: 100%;" id="menuTable">
                                 <thead>
                                     <tr>
                                         <th>Item Name</th>
@@ -177,7 +187,7 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
                                 </thead>
                                 <tbody>
                                     <?php foreach ($menuItems as $item): ?>
-                                        <tr class="row-hover">
+                                        <tr class="row-hover menu-row" data-status="<?= $item['IsAvailable'] == 1 ? 'available' : 'unavailable' ?>">
                                             <td class="text-bold"><?= htmlspecialchars($item['ItemName']) ?></td>
                                             <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color);"><?= htmlspecialchars($item['CategoryName']) ?></span></td>
                                             <td class="item-total-bold text-primary">₱<?= number_format($item['Price'], 2) ?></td>
@@ -466,27 +476,27 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
 
         setupImagePreview("addImageInput", "addMessage", "addPreview");
         setupImagePreview("editImageInput", "editMessage", "editPreview");
-    </script>
 
-    <!-- Quick Clock Modal -->
-    <div id="quickClockModal" class="modal-overlay hidden">
-        <div class="modal">
-            <button class="modal-close" id="btnCloseModal">&times;</button>
-            <h3>Quick Clock In / Out</h3>
-            <p class="text-muted-sm mb-20">Enter your Staff ID and Password.</p>
-            <div id="quickClockRes" class="hidden alert-box mb-15"></div>
+        function filterMenuTable() {
+            const filterValue = document.getElementById('menuFilter').value;
+            const searchValue = document.getElementById('menuSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#menuTable tbody tr.menu-row');
             
-            <form id="frmQuickClock">
-                <input type="text" id="qc_login_id" placeholder="Staff ID or Username" required class="form-input">
-                <input type="password" id="qc_password" placeholder="Password" required class="form-input">
+            rows.forEach(row => {
+                const status = row.getAttribute('data-status');
+                const rowText = row.innerText.toLowerCase();
                 
-                <div class="flex-row-gap mt-20">
-                    <button type="button" class="btn btn-clock-in flex-1" onclick="submitQuickClock('in')">Clock In</button>
-                    <button type="button" class="btn btn-clock-out flex-1" onclick="submitQuickClock('out')">Clock Out</button>
-                </div>
-            </form>
-        </div>
-    </div>
+                const matchesStatus = (filterValue === 'all') || (filterValue === status);
+                const matchesSearch = rowText.includes(searchValue);
+                
+                if (matchesStatus && matchesSearch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    </script>
 
     <script>
         function showToast(message, type = 'default') {
@@ -512,65 +522,6 @@ $roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
             }, 3000);
         }
 
-        const modal = document.getElementById('quickClockModal');
-        const btnOpen = document.getElementById('btnQuickClock');
-        const btnClose = document.getElementById('btnCloseModal');
-
-        btnOpen.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            document.getElementById('qc_login_id').focus();
-        });
-        btnClose.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            document.getElementById('quickClockRes').classList.add('hidden');
-            document.getElementById('frmQuickClock').reset();
-        });
-
-        async function submitQuickClock(actionType) {
-            const login_id = document.getElementById('qc_login_id').value;
-            const password = document.getElementById('qc_password').value;
-            const resDiv = document.getElementById('quickClockRes');
-
-            if (!login_id || !password) {
-                resDiv.classList.remove('hidden');
-                resDiv.style.display = 'block';
-                resDiv.className = 'alert-box alert-error';
-                resDiv.innerText = 'Please enter both ID and Password.';
-                return;
-            }
-
-            try {
-                const fd = new FormData();
-                fd.append('login_id', login_id);
-                fd.append('password', password);
-                fd.append('clock_action', actionType);
-
-                const response = await fetch('ajax_clock.php', {
-                    method: 'POST',
-                    body: fd
-                });
-                const data = await response.json();
-
-                resDiv.classList.remove('hidden');
-                resDiv.style.display = 'block';
-                if (data.ok) {
-                    resDiv.className = 'alert-box alert-success mb-15';
-                    resDiv.innerText = data.msg;
-                    setTimeout(() => {
-                        btnClose.click();
-                    }, 2500);
-                } else {
-                    resDiv.className = 'alert-box alert-error mb-15';
-                    resDiv.innerText = data.msg;
-                }
-            } catch (err) {
-                resDiv.classList.remove('hidden');
-                resDiv.style.display = 'block';
-                resDiv.className = 'alert-box alert-error mb-15';
-                resDiv.innerText = 'Network Error. Please try again.';
-            }
-        }
     </script>
 </body>
 </html>

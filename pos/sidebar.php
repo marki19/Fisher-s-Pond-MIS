@@ -4,23 +4,25 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <?php if (!$isSuperAdmin): ?>
 <aside class="pos-sidebar" id="sidebar">
     <div class="brand">
-        <span class="brand-text">Fisher's Pond</span>
+        <img src="../assets/fishers_pond_seafood_and_grill.jpg" alt="Fisher's Pond Seafood and Grill Logo" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; border: 2px solid #1a7aad; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <span class="brand-text" style="font-size: 0.9rem; line-height: 1.2;">Fisher's Pond<br>Seafood and Grill</span>
     </div>
     <nav class="nav-menu">
-        <div class="nav-group-header">Operations</div>
-        <a href="index.php" <?= $currentPage === 'index.php' ? 'class="active"' : '' ?>><span class="menu-text">POS Checkout</span></a>
-        <a href="orders.php" <?= $currentPage === 'orders.php' ? 'class="active"' : '' ?>><span class="menu-text">Orders Hub</span></a>
-        
         <?php if ($isAdmin || $isManager): ?>
-        <div class="nav-group-header">Management</div>
-        <a href="dashboard.php" <?= $currentPage === 'dashboard.php' ? 'class="active"' : '' ?>><span class="menu-text">Analytics Data</span></a>
-        <a href="menu_manage.php" <?= $currentPage === 'menu_manage.php' ? 'class="active"' : '' ?>><span class="menu-text">Menu Details</span></a>
-        <a href="payroll.php" <?= $currentPage === 'payroll.php' ? 'class="active"' : '' ?>><span class="menu-text">Staff Payroll</span></a>
+        <div class="nav-group-header">Manager Access</div>
+        <a href="dashboard.php" <?= $currentPage === 'dashboard.php' ? 'class="active"' : '' ?>><span class="menu-text">Sales Report</span></a>
+        <a href="menu_manage.php" <?= $currentPage === 'menu_manage.php' ? 'class="active"' : '' ?>><span class="menu-text">Menu Management</span></a>
+        <a href="discounts.php" <?= $currentPage === 'discounts.php' ? 'class="active"' : '' ?>><span class="menu-text">Discounts</span></a>
+        <a href="payroll.php" <?= $currentPage === 'payroll.php' ? 'class="active"' : '' ?>><span class="menu-text">Payroll</span></a>
+        <div class="nav-group-header" style="margin-top: 16px;">Cashier Access</div>
+        <?php else: ?>
+        <div class="nav-group-header">Cashier Access</div>
         <?php endif; ?>
+        <a href="index.php" <?= $currentPage === 'index.php' ? 'class="active"' : '' ?>><span class="menu-text">Order Terminal</span></a>
+        <a href="orders.php" <?= $currentPage === 'orders.php' ? 'class="active"' : '' ?>><span class="menu-text">Order History</span></a>
     </nav>
     <div class="sidebar-footer">
-        <button id="btnQuickClock" class="btn btn-outline btn-full-width mb-12">Quick Clock In/Out</button>
-        <a href="../index.php" class="btn btn-logout link-block">Exit POS</a>
+        <a href="../index.php" class="btn btn-logout link-block">Log Out</a>
     </div>
 </aside>
 <?php endif; ?>

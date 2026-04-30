@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Prevent browser caching to secure the Back button
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
@@ -78,13 +78,16 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Fisher's Pond Kiosk</title>
+    <title>Fisher's Pond Seafood and Grill Kiosk</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="kiosk-container">
-        <h1>Fisher's Pond Kiosk</h1>
+    <div class="kiosk-container <?= in_array($view, ['my_status', 'my_details']) ? 'kiosk-landscape' : '' ?>">
+        <?php if (!in_array($view, ['my_status', 'my_details'])): ?>
+            <img src="../assets/fishers_pond_seafood_and_grill.jpg" alt="Fisher's Pond Seafood and Grill Logo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 20px; border: 4px solid #1a7aad; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+            <h1 style="line-height: 1.2;">Fisher's Pond<br><span style="font-size: 1.5rem; font-weight: 500;">Seafood and Grill</span></h1>
+        <?php endif; ?>
         <?php if ($message): ?>
             <div class="alert alert-<?= htmlspecialchars($msgType) ?>">
                 <?= htmlspecialchars($message) ?>
@@ -92,77 +95,186 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
         <?php endif; ?>
 
         <?php if ($view === 'dashboard'): ?>
-            <p class="subtitle">Hello, <strong><?= htmlspecialchars($_SESSION['active_name']) ?></strong>!</p>
-            <form method="POST">
-                <input type="hidden" name="action" value="clock">
-                <button type="submit" name="clock_action" value="in" class="btn btn-clock-in">CLOCK IN</button>
-                <button type="submit" name="clock_action" value="out" class="btn btn-clock-out">CLOCK OUT</button>
-            </form>
-            <hr>
-            <h3 class="text-lg mb-16">Manage Account</h3>
-            <button onclick="window.location.href='?v=my_details'" class="btn btn-outline">Update Details & Password</button>
-            <div class="mb-8"></div>
-            <form method="POST">
-                <input type="hidden" name="action" value="logout">
-                <button type="submit" class="link-btn text-muted">Log Out / Lock Kiosk</button>
-            </form>
+            <div class="clock-grid">
+                <div class="clock-col clock-col-left">
+                    <img src="../assets/fishers_pond_seafood_and_grill.jpg" alt="Logo" style="width:80px;height:80px;border-radius:50%;object-fit:contain;display:block;margin:0 auto 16px;border:3px solid #0e7490;box-shadow:0 4px 12px rgba(14,116,144,0.25);background:#f0f9ff;">
+                    <h1 style="font-size:1.3rem;margin-bottom:4px;line-height:1.3;">Fisher's Pond<br><span style="font-size:0.9rem;font-weight:500;opacity:0.75;">Seafood and Grill</span></h1>
+                    <p style="font-size:0.88rem;margin-bottom:20px;opacity:0.7;">Welcome, <strong><?= htmlspecialchars($_SESSION['active_name']) ?></strong></p>
+                    <div class="clock-section-label">Attendance</div>
+                    <form method="POST" style="width:100%;"><input type="hidden" name="action" value="clock">
+                        <button type="submit" name="clock_action" value="in" class="btn btn-clock-in" style="margin-bottom:10px;">Clock In</button>
+                        <button type="submit" name="clock_action" value="out" class="btn btn-clock-out">Clock Out</button>
+                    </form>
+                </div>
+                <div class="clock-col clock-col-right">
+                    <div class="clock-section-label">Manage Account</div>
+                    <button onclick="window.location.href='?v=my_status'" class="btn clock-nav-btn"><span class="clock-nav-icon">&#128203;</span><span class="clock-nav-text"><strong>My Status</strong><small>Shifts &amp; payroll history</small></span></button>
+                    <button onclick="window.location.href='?v=my_details'" class="btn clock-nav-btn"><span class="clock-nav-icon">&#9998;</span><span class="clock-nav-text"><strong>Update Details</strong><small>Profile &amp; password</small></span></button>
+                    <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">
+                    <form method="POST" style="width:100%;"><input type="hidden" name="action" value="logout">
+                        <button type="submit" class="btn clock-nav-btn clock-nav-logout"><span class="clock-nav-icon">&#128274;</span><span class="clock-nav-text"><strong>Log Out</strong><small>Lock this kiosk</small></span></button>
+                    </form>
+                </div>
+            </div>
 
         <?php elseif ($view === 'my_details'): 
             $emp = getEmployee($pdo, $_SESSION['active_staffID']);
         ?>
-            <p class="subtitle">Update Your Account</p>
+            <div class="status-header">
+                <div class="flex-column" style="text-align: left;">
+                    <h2 style="font-size: 1.75rem; margin: 0; color: #0f172a; font-weight: 800; letter-spacing: -0.02em;">Update Your Account</h2>
+                    <p class="text-muted-sm" style="margin-top: 4px; color: #64748b;">Keep your personal details and password up to date</p>
+                </div>
+                <button onclick="window.location.href='index.php'" class="btn btn-outline" style="width: auto; padding: 10px 20px; margin: 0; display: inline-flex; align-items: center; gap: 8px;">â† Back to Dashboard</button>
+            </div>
+            
             <form method="POST">
                 <input type="hidden" name="action" value="update_account">
-                <div class="form-group">
-                    <label>Username (Optional)</label><input type="text" name="Username" value="<?= htmlspecialchars($emp['Username'] ?? '') ?>">
-                </div>
-                <div class="flex-row-gap-12">
-                    <div class="form-group flex-1">
-                        <label>First Name</label><input type="text" name="FirstName" value="<?= htmlspecialchars($emp['FirstName']) ?>" required>
+                
+                <div class="status-grid">
+                    <div class="status-column">
+                        <h3 class="text-lg mb-16" style="text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; color: #1e293b;">Personal Details</h3>
+                        <div class="flex-row-gap-12">
+                            <div class="form-group flex-1">
+                                <label>First Name</label><input type="text" name="FirstName" value="<?= htmlspecialchars($emp['FirstName']) ?>" required>
+                            </div>
+                            <div class="form-group flex-1">
+                                <label>Last Name</label><input type="text" name="LastName" value="<?= htmlspecialchars($emp['LastName']) ?>" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Birth Date</label><input type="date" name="BirthDate" value="<?= htmlspecialchars($emp['BirthDate']) ?>" class="w-full p-12 border-gray rounded-8" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label><input type="email" name="Email" value="<?= htmlspecialchars($emp['Email']) ?>" class="w-full p-12 border-gray rounded-8" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Number</label><input type="tel" name="ContactNumber" value="<?= htmlspecialchars($emp['ContactNumber']) ?>" class="w-full p-12 border-gray rounded-8" required>
+                        </div>
                     </div>
-                    <div class="form-group flex-1">
-                        <label>Last Name</label><input type="text" name="LastName" value="<?= htmlspecialchars($emp['LastName']) ?>" required>
+                    
+                    <div class="status-column">
+                        <h3 class="text-lg mb-16" style="text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; color: #1e293b;">Security & Credentials</h3>
+                        <div class="form-group">
+                            <label>Username (Optional)</label><input type="text" name="Username" value="<?= htmlspecialchars($emp['Username'] ?? '') ?>">
+                        </div>
+                        
+                        <div class="hr-fancy" style="margin: 16px 0;"></div>
+                        <p class="subtitle text-sm mb-12" style="text-align:left; margin-bottom:8px;">Change Password (Optional)</p>
+                        <div class="form-group">
+                            <input type="password" name="new_password" placeholder="New Password">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" name="confirm_password" placeholder="Confirm New Password">
+                        </div>
+                        
+                        <div class="hr-fancy" style="margin: 16px 0;"></div>
+                        <p class="subtitle text-sm mb-12 text-danger" style="text-align:left; margin-bottom:8px; font-weight:600;">Current Password required to save</p>
+                        <div class="form-group">
+                            <input type="password" name="current_password" placeholder="Current Password" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-clock-in mt-12">Save Changes</button>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Birth Date</label><input type="date" name="BirthDate" value="<?= htmlspecialchars($emp['BirthDate']) ?>" class="w-full p-12 border-gray rounded-8" required>
-                </div>
-                <div class="form-group">
-                    <label>Email</label><input type="email" name="Email" value="<?= htmlspecialchars($emp['Email']) ?>" class="w-full p-12 border-gray rounded-8" required>
-                </div>
-                <div class="form-group">
-                    <label>Contact Number</label><input type="tel" name="ContactNumber" value="<?= htmlspecialchars($emp['ContactNumber']) ?>" class="w-full p-12 border-gray rounded-8" required>
-                </div>
-                
-                <hr class="hr-fancy">
-                <p class="subtitle text-sm mb-12">Change Password (Optional)</p>
-                <div class="form-group">
-                    <input type="password" name="new_password" placeholder="New Password">
-                </div>
-                <div class="form-group">
-                    <input type="password" name="confirm_password" placeholder="Confirm New Password">
-                </div>
-                
-                <hr class="hr-fancy">
-                <p class="subtitle text-sm mb-12 text-danger">Current Password required to save</p>
-                <div class="form-group">
-                    <input type="password" name="current_password" placeholder="Current Password" required>
-                </div>
-                
-                <button type="submit" class="btn btn-clock-in">Save Changes</button>
             </form>
-            <button onclick="window.location.href='index.php'" class="link-btn">← Back to Dashboard</button>
+
+        <?php elseif ($view === 'my_status'): 
+            $staffID = $_SESSION['active_staffID'];
+            
+            // Get recent shifts
+            $stmtShifts = $pdo->prepare("SELECT ShiftDate, ClockIn, ClockOut FROM employeeshift WHERE StaffID = ? ORDER BY ShiftDate DESC, ClockIn DESC LIMIT 5");
+            $stmtShifts->execute([$staffID]);
+            $shifts = $stmtShifts->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get recent payroll
+            $stmtPayroll = $pdo->prepare("
+                SELECT pr.*, pp.StartDate, pp.EndDate, pp.GeneratedDate 
+                FROM payroll_record pr 
+                JOIN payroll_period pp ON pr.PeriodID = pp.PeriodID 
+                WHERE pr.StaffID = ? 
+                ORDER BY pp.PeriodID DESC LIMIT 5
+            ");
+            $stmtPayroll->execute([$staffID]);
+            $payrolls = $stmtPayroll->fetchAll(PDO::FETCH_ASSOC);
+        ?>
+            <div class="status-header">
+                <div class="flex-column" style="text-align: left;">
+                    <h2 style="font-size: 1.75rem; margin: 0; color: #0f172a; font-weight: 800; letter-spacing: -0.02em;">My Status Overview</h2>
+                    <p class="text-muted-sm" style="margin-top: 4px; color: #64748b;">Review your recent shifts and payroll history</p>
+                </div>
+                <button onclick="window.location.href='index.php'" class="btn btn-outline" style="width: auto; padding: 10px 20px; margin: 0; display: inline-flex; align-items: center; gap: 8px;">â† Back to Dashboard</button>
+            </div>
+            
+            <div class="status-grid">
+                <!-- Column 1: Shifts -->
+                <div class="status-column">
+                    <h3 class="text-lg mb-16" style="text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; color: #1e293b;">Recent Shifts</h3>
+                    <?php if (empty($shifts)): ?>
+                        <p class="text-muted-sm" style="text-align: left;">No recent shifts found.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="w-full text-left" style="font-size: 0.95rem; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 12px 8px; color: #64748b; font-weight: 600;">Date</th>
+                                        <th style="padding: 12px 8px; color: #64748b; font-weight: 600;">Clock In</th>
+                                        <th style="padding: 12px 8px; color: #64748b; font-weight: 600;">Clock Out</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($shifts as $s): ?>
+                                        <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                                            <td style="padding: 14px 8px; font-weight: 500; color: #0f172a;"><?= date('M d', strtotime($s['ShiftDate'])) ?></td>
+                                            <td style="padding: 14px 8px; color: #475569;"><?= $s['ClockIn'] ? date('h:i A', strtotime($s['ClockIn'])) : '-' ?></td>
+                                            <td style="padding: 14px 8px; color: #475569;"><?= $s['ClockOut'] ? date('h:i A', strtotime($s['ClockOut'])) : '<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Active</span>' ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Column 2: Payroll -->
+                <div class="status-column">
+                    <h3 class="text-lg mb-16" style="text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; color: #1e293b;">Recent Payroll</h3>
+                    <?php if (empty($payrolls)): ?>
+                        <p class="text-muted-sm" style="text-align: left;">No recent payroll found.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="w-full text-left" style="font-size: 0.95rem; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 12px 8px; color: #64748b; font-weight: 600;">Period</th>
+                                        <th style="padding: 12px 8px; color: #64748b; font-weight: 600;">Hours</th>
+                                        <th style="padding: 12px 8px; color: #64748b; font-weight: 600; text-align: right;">Net Pay</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($payrolls as $p): ?>
+                                        <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                                            <td style="padding: 14px 8px; font-weight: 500; color: #0f172a;">
+                                                <?= date('M d', strtotime($p['StartDate'])) ?> - <?= date('M d', strtotime($p['EndDate'])) ?>
+                                            </td>
+                                            <td style="padding: 14px 8px; color: #475569;"><?= number_format($p['TotalHours'], 2) ?>h</td>
+                                            <td style="padding: 14px 8px; font-weight: 700; color: #10b981; text-align: right; font-size: 1.05rem;">â‚±<?= number_format($p['NetPay'], 2) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
 
         <?php elseif ($view === 'activate'): ?>
             <p class="subtitle">Account Activation</p>
-            <p class="text-sm text-muted text-center mb-16">Enter the Staff ID and Email created by your Administrator</p>
+            <p class="text-sm text-muted text-center mb-16">Enter the Email or Contact Number registered by your Administrator</p>
             <form method="POST">
                 <input type="hidden" name="action" value="activate">
                 <div class="form-group">
-                    <input type="number" name="staffID" placeholder="Staff ID Number" required class="w-full p-12 border-gray rounded-8 font-1rem">
-                </div>
-                <div class="form-group">
-                    <input type="email" name="email" placeholder="Registered Email Address" required class="w-full p-12 border-gray rounded-8 font-1rem">
+                    <input type="text" name="contact_info" placeholder="Registered Email or Contact Number" required class="w-full p-12 border-gray rounded-8 font-1rem">
                 </div>
                 <hr class="hr-fancy">
                 <div class="form-group">
@@ -173,7 +285,7 @@ if ($loggedIn && $view === 'default') { $view = 'dashboard'; }
                 </div>
                 <button type="submit" class="btn btn-clock-in mt-8">Activate Account</button>
             </form>
-            <button onclick="window.location.href='../index.php'" class="link-btn">← Back to Login</button>
+            <button onclick="window.location.href='../index.php'" class="link-btn">â† Back to Login</button>
 
         <?php endif; ?>
     </div>

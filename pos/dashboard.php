@@ -22,18 +22,29 @@ if (!$isAdmin && !$isManager) {
 
 // Queries logic with dropdown filter
 $filter = $_GET['filter'] ?? 'Today';
+$month_filter = $_GET['month_filter'] ?? '';
+
 $today = date('Y-m-d');
 $startDate = $today;
 $endDate = $today;
 
-if ($filter === 'Weekly') {
-    $startDate = date('Y-m-d', strtotime('-7 days'));
-} elseif ($filter === 'Monthly') {
-    $startDate = date('Y-m-01');
-} elseif ($filter === 'Bi-Monthly') {
-    $startDate = date('Y-m-d', strtotime('-2 months'));
-} elseif ($filter === 'Annual') {
-    $startDate = date('Y-m-d', strtotime('-1 year'));
+$displayLabel = $filter;
+
+if (!empty($month_filter)) {
+    $startDate = $month_filter . '-01';
+    $endDate = date('Y-m-t', strtotime($startDate));
+    $displayLabel = date('F Y', strtotime($startDate));
+    $filter = ''; // Clear dropdown selection
+} else {
+    if ($filter === 'Weekly') {
+        $startDate = date('Y-m-d', strtotime('-7 days'));
+    } elseif ($filter === 'Monthly') {
+        $startDate = date('Y-m-01');
+    } elseif ($filter === 'Bi-Monthly') {
+        $startDate = date('Y-m-d', strtotime('-2 months'));
+    } elseif ($filter === 'Annual') {
+        $startDate = date('Y-m-d', strtotime('-1 year'));
+    }
 }
 
 $revTotalStmt = $pdo->prepare("SELECT SUM(GrandTotal) FROM orders WHERE DATE(OrderDate) >= ? AND DATE(OrderDate) <= ? AND Status != 'Voided'");
@@ -53,15 +64,37 @@ $recentOrdersStmt = $pdo->prepare("
 ");
 $recentOrdersStmt->execute([$startDate, $endDate]);
 $recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Chart Data Query
+$chartStmt = $pdo->prepare("
+    SELECT DATE(OrderDate) as oDate, SUM(GrandTotal) as dailyRev, COUNT(OrderID) as dailyCount
+    FROM orders 
+    WHERE DATE(OrderDate) >= ? AND DATE(OrderDate) <= ? AND Status != 'Voided'
+    GROUP BY DATE(OrderDate)
+    ORDER BY DATE(OrderDate) ASC
+");
+$chartStmt->execute([$startDate, $endDate]);
+$chartRows = $chartStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$chartDates = [];
+$chartRevs = [];
+$chartCounts = [];
+foreach ($chartRows as $r) {
+    $chartDates[] = date('M j', strtotime($r['oDate']));
+    $chartRevs[] = (float)$r['dailyRev'];
+    $chartCounts[] = (int)$r['dailyCount'];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Fisher's Pond</title>
+    <title>Dashboard - Fisher's Pond Seafood and Grill</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="page-wrapper">
@@ -71,26 +104,42 @@ $recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
         <main class="page-content">
             <div class="flex-row-center" style="justify-content: space-between; margin-bottom: 24px;">
                 <h1 style="margin: 0;">Analytics Dashboard</h1>
-                <form method="GET" class="flex-row-center">
-                    <label class="text-bold">View: </label>
-                    <select name="filter" class="form-input form-input-nomargin" style="width: 200px;" onchange="this.form.submit()">
-                        <option value="Today" <?= $filter === 'Today' ? 'selected' : '' ?>>Today</option>
-                        <option value="Weekly" <?= $filter === 'Weekly' ? 'selected' : '' ?>>Weekly</option>
-                        <option value="Monthly" <?= $filter === 'Monthly' ? 'selected' : '' ?>>Month-to-Date</option>
-                        <option value="Bi-Monthly" <?= $filter === 'Bi-Monthly' ? 'selected' : '' ?>>Bi-Monthly</option>
-                        <option value="Annual" <?= $filter === 'Annual' ? 'selected' : '' ?>>Annual</option>
-                    </select>
+                <form method="GET" class="flex-row-center" style="gap: 16px;">
+                    <div class="flex-row-center">
+                        <label class="text-bold" style="margin-right: 8px;">Quick View: </label>
+                        <select name="filter" class="form-input form-input-nomargin" style="width: 160px;" onchange="document.getElementById('month_filter').value=''; this.form.submit()">
+                            <option value="Today" <?= $filter === 'Today' ? 'selected' : '' ?>>Today</option>
+                            <option value="Weekly" <?= $filter === 'Weekly' ? 'selected' : '' ?>>Weekly</option>
+                            <option value="Monthly" <?= $filter === 'Monthly' ? 'selected' : '' ?>>Month-to-Date</option>
+                            <option value="Bi-Monthly" <?= $filter === 'Bi-Monthly' ? 'selected' : '' ?>>Bi-Monthly</option>
+                            <option value="Annual" <?= $filter === 'Annual' ? 'selected' : '' ?>>Annual</option>
+                        </select>
+                    </div>
+                    <span class="text-muted text-sm text-bold">OR</span>
+                    <div class="flex-row-center">
+                        <label class="text-bold" style="margin-right: 8px;">Any Month: </label>
+                        <input type="month" name="month_filter" id="month_filter" value="<?= htmlspecialchars($month_filter) ?>" class="form-input form-input-nomargin" style="width: 160px;" onchange="document.querySelector('select[name=filter]').value=''; this.form.submit()">
+                    </div>
                 </form>
             </div>
             
             <div class="stats-grid">
                 <div class="stat-card primary">
-                    <h3>Orders (<?= htmlspecialchars($filter) ?>)</h3>
+                    <h3>Orders (<?= htmlspecialchars($displayLabel) ?>)</h3>
                     <div class="value"><?= number_format($totalOrders) ?></div>
                 </div>
                 <div class="stat-card success">
-                    <h3>Revenue (<?= htmlspecialchars($filter) ?>)</h3>
+                    <h3>Revenue (<?= htmlspecialchars($displayLabel) ?>)</h3>
                     <div class="value">₱<?= number_format($revTotal, 2) ?></div>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
                 </div>
             </div>
 
@@ -99,7 +148,7 @@ $recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php if (empty($recentOrders)): ?>
                     <p class="text-muted">No recent orders found.</p>
                 <?php else: ?>
-                    <table>
+                    <table id="recentOrdersTable">
                         <thead>
                             <tr>
                                 <th>Order ID</th>
@@ -126,25 +175,6 @@ $recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
         </main>
     </div>
 
-    <!-- Quick Clock Modal -->
-    <div id="quickClockModal" class="modal-overlay hidden">
-        <div class="modal">
-            <button class="modal-close" id="btnCloseModal">&times;</button>
-            <h3>Quick Clock In / Out</h3>
-            <p class="text-muted-sm mb-20">Enter your Staff ID and Password.</p>
-            <div id="quickClockRes" class="quick-clock-res hidden"></div>
-            
-            <form id="frmQuickClock">
-                <input type="text" id="qc_login_id" placeholder="Staff ID or Username" required class="form-input">
-                <input type="password" id="qc_password" placeholder="Password" required class="form-input">
-                
-                <div class="flex-row-gap mt-20">
-                    <button type="button" class="btn btn-clock-in flex-1" onclick="submitQuickClock('in')">Clock In</button>
-                    <button type="button" class="btn btn-clock-out flex-1" onclick="submitQuickClock('out')">Clock Out</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Toast Notification System included from index -->
     <script>
@@ -162,71 +192,125 @@ $recentOrders = $recentOrdersStmt->fetchAll(PDO::FETCH_ASSOC);
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        const modal = document.getElementById('quickClockModal');
-        const btnOpen = document.getElementById('btnQuickClock');
-        const btnClose = document.getElementById('btnCloseModal');
+        
+        // --- Chart.js Integration ---
+        const chartDates = <?= json_encode($chartDates) ?>;
+        const chartRevs = <?= json_encode($chartRevs) ?>;
+        const chartCounts = <?= json_encode($chartCounts) ?>;
 
-        if (btnOpen) {
-            btnOpen.addEventListener('click', () => {
-                modal.classList.remove('hidden');
-                modal.classList.add('show-flex');
-                document.getElementById('qc_login_id').focus();
-            });
-        }
-        if (btnClose) {
-            btnClose.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('show-flex');
-                document.getElementById('quickClockRes').classList.add('hidden');
-                document.getElementById('quickClockRes').classList.remove('show-block');
-                document.getElementById('frmQuickClock').reset();
-            });
-        }
-
-        async function submitQuickClock(actionType) {
-            const login_id = document.getElementById('qc_login_id').value;
-            const password = document.getElementById('qc_password').value;
-            const resDiv = document.getElementById('quickClockRes');
-
-            if (!login_id || !password) {
-                resDiv.classList.remove('hidden');
-                resDiv.classList.add('show-block');
-                resDiv.className = 'quick-clock-res alert-box alert-error show-block';
-                resDiv.innerText = 'Please enter both ID and Password.';
-                return;
-            }
-
-            try {
-                const fd = new FormData();
-                fd.append('login_id', login_id);
-                fd.append('password', password);
-                fd.append('clock_action', actionType);
-
-                const response = await fetch('ajax_clock.php', { method: 'POST', body: fd });
-                const data = await response.json();
-
-                resDiv.classList.remove('hidden');
-                resDiv.classList.add('show-block');
-                if (data.ok) {
-                    resDiv.className = 'quick-clock-res alert-box alert-success show-block';
-                    resDiv.innerText = data.msg;
-                    setTimeout(() => {
-                        if (btnClose) btnClose.click();
-                        if (actionType === 'out' && data.is_self) {
-                            window.location.href = '../index.php';
-                        }
-                    }, 2500);
-                } else {
-                    resDiv.className = 'quick-clock-res alert-box alert-error show-block';
-                    resDiv.innerText = data.msg;
+        if (chartDates.length > 0) {
+            // Revenue Line Chart
+            const ctxRev = document.getElementById('revenueChart').getContext('2d');
+            new Chart(ctxRev, {
+                type: 'line',
+                data: {
+                    labels: chartDates,
+                    datasets: [{
+                        label: 'Daily Revenue (₱)',
+                        data: chartRevs,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#4f46e5'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: 'Revenue over Time', font: { size: 16 } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: function(value) { return '₱' + value; } } }
+                    }
                 }
-            } catch (err) {
-                resDiv.classList.remove('hidden');
-                resDiv.classList.add('show-block');
-                resDiv.className = 'quick-clock-res alert-box alert-error show-block';
-                resDiv.innerText = 'Network Error. Please try again.';
-            }
+            });
+
+            // Orders Bar Chart
+            const ctxOrd = document.getElementById('ordersChart').getContext('2d');
+            new Chart(ctxOrd, {
+                type: 'bar',
+                data: {
+                    labels: chartDates,
+                    datasets: [{
+                        label: 'Number of Orders',
+                        data: chartCounts,
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: 'Order Volume', font: { size: 16 } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Pagination
+            function paginateTable(tableId, rowsPerPage) {
+                const table = document.getElementById(tableId);
+                if (!table) return;
+                const tbody = table.querySelector('tbody');
+                if (!tbody) return;
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                if (rows.length <= rowsPerPage) return;
+                
+                const totalPages = Math.ceil(rows.length / rowsPerPage);
+                let currentPage = 1;
+                
+                const existingControls = table.nextElementSibling;
+                if (existingControls && existingControls.classList.contains('pagination-controls')) {
+                    existingControls.remove();
+                }
+
+                const controls = document.createElement('div');
+                controls.className = 'pagination-controls';
+                
+                const render = () => {
+                    rows.forEach((row, index) => {
+                        row.classList.toggle('hidden-row', index < (currentPage - 1) * rowsPerPage || index >= currentPage * rowsPerPage);
+                    });
+                    
+                    controls.innerHTML = '';
+                    
+                    const prevBtn = document.createElement('button');
+                    prevBtn.innerText = 'Prev';
+                    prevBtn.disabled = currentPage === 1;
+                    prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; render(); } };
+                    controls.appendChild(prevBtn);
+                    
+                    for (let i = 1; i <= totalPages; i++) {
+                        const pageBtn = document.createElement('button');
+                        pageBtn.innerText = i;
+                        if (i === currentPage) pageBtn.classList.add('active');
+                        pageBtn.onclick = () => { currentPage = i; render(); };
+                        controls.appendChild(pageBtn);
+                    }
+                    
+                    const nextBtn = document.createElement('button');
+                    nextBtn.innerText = 'Next';
+                    nextBtn.disabled = currentPage === totalPages;
+                    nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; render(); } };
+                    controls.appendChild(nextBtn);
+                };
+                
+                table.parentNode.insertBefore(controls, table.nextSibling);
+                render();
+            }
+
+            paginateTable('recentOrdersTable', 10);
+        });
     </script>
 </body>
 </html>
