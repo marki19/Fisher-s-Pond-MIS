@@ -8,8 +8,15 @@ session_start();
 require __DIR__ . '/../config.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
-$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'SuperAdmin';
+$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
+
+$isClockedIn = false;
+if (isset($_SESSION['active_staffID'])) {
+    $checkShift = $pdo->prepare("SELECT ShiftID FROM employeeshift WHERE StaffID = ? AND ClockOut IS NULL");
+    $checkShift->execute([$_SESSION['active_staffID']]);
+    $isClockedIn = $checkShift->fetch() ? true : false;
+}
 
 // Only SuperAdmins and Managers can access Payroll
 if (!$isSuperAdmin && !$isManager) {
@@ -23,8 +30,15 @@ if (!$isSuperAdmin && !$isManager) {
     exit;
 }
 
-$activeName = $isAdmin ? "Admin (" . $_SESSION['admin_username'] . ")" : $_SESSION['active_name'];
-$roleName = $isSuperAdmin ? "SuperAdmin" : "Manager";
+if (!$isAdmin && !$isClockedIn) {
+    $_SESSION['kiosk_msg'] = 'Access Denied: You must clock in first before accessing the POS Terminal.';
+    $_SESSION['kiosk_msg_type'] = 'error';
+    header("Location: ../employees/index.php");
+    exit;
+}
+
+$activeName = $isAdmin ? $_SESSION['admin_username'] : $_SESSION['active_name'];
+$roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
 
 $settingsStmt = $pdo->query("SELECT key_name, key_value FROM store_settings");
 $storeSettings = [];
@@ -47,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt = $pdo->prepare("
                 SELECT 
                     e.staffID, p.BaseRate,
-                    SUM(TIMESTAMPDIFF(MINUTE, s.ClockIn, s.ClockOut) / 60.0) as TotalHours
+                    COUNT(DISTINCT DATE(s.ShiftDate)) as TotalDays
                 FROM employeeshift s
                 JOIN employee e ON s.StaffID = e.staffID
                 JOIN position p ON e.PositionID = p.PositionID
@@ -74,14 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 ");
                 
                 foreach ($unpaidShifts as $row) {
-                    $hours = floatval($row['TotalHours']);
+                    $days = floatval($row['TotalDays']);
                     $rate = floatval($row['BaseRate']);
-                    $gross = $hours * $rate;
+                    $gross = $days * $rate;
                     $tax = $gross * $payrollTaxRate;
                     $net = $gross - $tax;
                     
                     $stmtInsertRecord->execute([
-                        $periodId, $row['staffID'], $hours, $rate, $gross, $tax, $net
+                        $periodId, $row['staffID'], $days, $rate, $gross, $tax, $net
                     ]);
                 }
                 
@@ -175,7 +189,7 @@ if ($viewPeriod) {
                         </div>
                         <button type="submit" class="btn btn-primary" style="background:var(--primary); color:white; padding:12px 24px; border-radius:var(--radius-sm); border:none; font-weight:600;">Generate Payroll</button>
                     </form>
-                    <p class="text-muted-sm mt-20" style="margin-top:12px;">* Generating payroll calculates wages for all UNPROCESSED shifts falling within this date range and locks them from being generated again.</p>
+                    <p class="text-muted-sm mt-20" style="margin-top:12px;">* Generating payroll calculates daily wages for all UNPROCESSED shifts in this date range and locks them from being generated again.</p>
                 </div>
 
                 <div class="card">
@@ -226,7 +240,7 @@ if ($viewPeriod) {
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Base Rate</th>
-                                <th>Total Hours</th>
+                                <th>Total Days</th>
                                 <th>Gross Pay</th>
                                 <th>Tax Deduction</th>
                                 <th>Net Pay</th>
@@ -238,8 +252,8 @@ if ($viewPeriod) {
                                 <td class="text-bold">#<?= htmlspecialchars($row['StaffID']) ?></td>
                                 <td><?= htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']) ?> <?= !$row['IsActive'] ? '<span class="status-badge status-Voided">Inactive</span>' : '' ?></td>
                                 <td><?= htmlspecialchars($row['PositionName']) ?></td>
-                                <td>₱<?= number_format($row['BaseRate'], 2) ?>/hr</td>
-                                <td><?= number_format($row['TotalHours'], 2) ?>h</td>
+                                <td>₱<?= number_format($row['BaseRate'], 2) ?>/day</td>
+                                <td><?= number_format($row['TotalHours'], 0) ?> day(s)</td>
                                 <td>₱<?= number_format($row['GrossPay'], 2) ?></td>
                                 <td class="text-danger">-₱<?= number_format($row['TaxDeduction'], 2) ?></td>
                                 <td class="item-total-bold text-success">₱<?= number_format($row['NetPay'], 2) ?></td>

@@ -20,13 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['kiosk_msg'] = 'Welcome back, ' . htmlspecialchars($_SESSION['active_name']) . '!';
             $_SESSION['kiosk_msg_type'] = 'success';
             
-            // Route Manager (1) and Cashier (3) to POS, others to Time Clock Kiosk
-            if ($_SESSION['position_id'] == 1 || $_SESSION['position_id'] == 3) {
-                clockIn($pdo, $_SESSION['active_staffID']); // Auto-clock in!
-                header('Location: pos/index.php');
-            } else {
-                header('Location: employees/index.php'); 
-            }
+            // All staff are routed to the Kiosk first to clock in
+            header('Location: employees/index.php'); 
             exit;
         }
     } else {

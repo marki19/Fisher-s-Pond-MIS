@@ -19,16 +19,14 @@ function unifiedLogin(PDO $pdo, string $login_id, string $password): array {
     }
 
     // 2. Check Staff
-    $clean_login = str_replace(' ', '', strtolower($login_id));
-
     $stmt = $pdo->prepare("
         SELECT * FROM employee 
         WHERE (
-            REPLACE(LOWER(CONCAT(FirstName, LastName)), ' ', '') = ? 
+            CONCAT(FirstName, ' ', LastName) = ? 
             OR Username = ?
         ) AND (IsActive = 1 OR IsActive IS NULL)
     ");
-    $stmt->execute([$clean_login, $login_id]);
+    $stmt->execute([$login_id, $login_id]);
     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($employees)) {

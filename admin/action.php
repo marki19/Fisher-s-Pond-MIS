@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php?tab=settings');
         exit;
     } elseif ($action === 'add_admin') {
-        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'Admin') {
             $res = addAdminUser($pdo, $_POST);
             $_SESSION['admin_msg'] = $res['msg'];
             $_SESSION['admin_msg_type'] = $res['ok'] ? 'success' : 'error';
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php?tab=settings');
         exit;
     } elseif ($action === 'manage_admin') {
-        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'Admin') {
             $adminId = (int)($_POST['admin_id'] ?? 0);
             if ($adminId > 0) {
                 $res = updateOtherAdminAccount($pdo, $adminId, $_POST);
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php?tab=settings');
         exit;
     } elseif ($action === 'delete_admin') {
-        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'Admin') {
             $adminId = (int)($_POST['admin_id'] ?? 0);
             if ($adminId > 0) {
                 $res = deleteAdminAccount($pdo, $adminId);
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php?tab=platforms');
         exit;
     } elseif ($action === 'update_tax_settings') {
-        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'Admin') {
             $orderTaxPct = (float)($_POST['order_tax_rate'] ?? 12);
             $payrollTaxPct = (float)($_POST['payroll_tax_rate'] ?? 5);
             
@@ -163,14 +163,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php?tab=settings');
         exit;
     } elseif ($action === 'update_base_rate') {
-        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'SuperAdmin') {
+        if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'Admin') {
             $positionId = (int)($_POST['PositionID'] ?? 0);
             $baseRate   = (float)($_POST['BaseRate'] ?? 0);
 
             if ($positionId > 0 && $baseRate >= 0) {
                 $stmt = $pdo->prepare("UPDATE position SET BaseRate = ? WHERE PositionID = ?");
                 $stmt->execute([$baseRate, $positionId]);
-                $_SESSION['admin_msg']      = 'Base rate updated successfully.';
+                $_SESSION['admin_msg']      = 'Daily salary rate updated successfully.';
                 $_SESSION['admin_msg_type'] = 'success';
             } else {
                 $_SESSION['admin_msg']      = 'Invalid position or rate value.';

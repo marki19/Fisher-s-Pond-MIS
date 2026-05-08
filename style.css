@@ -5,41 +5,41 @@
 
 :root {
     /* — Brand Colors — */
-    --primary:          #0e7490;
-    --primary-hover:    #0c6080;
-    --primary-dark:     #0c2d48;
-    --primary-light:    #cffafe;
-    --primary-lighter:  #f0f9ff;
+    --primary: #0e7490;
+    --primary-hover: #0c6080;
+    --primary-dark: #0c2d48;
+    --primary-light: #cffafe;
+    --primary-lighter: #f0f9ff;
 
     /* — Semantic Colors — */
-    --success:          #059669;
-    --success-light:    #d1fae5;
-    --danger:           #dc2626;
-    --danger-light:     #fee2e2;
-    --warning:          #d97706;
-    --warning-light:    #fef3c7;
+    --success: #059669;
+    --success-light: #d1fae5;
+    --danger: #dc2626;
+    --danger-light: #fee2e2;
+    --warning: #d97706;
+    --warning-light: #fef3c7;
 
     /* — Neutrals — */
-    --bg-main:          #f0f9ff;
-    --bg-card:          #ffffff;
-    --text-dark:        #0c1a2e;
-    --text-muted:       #64748b;
-    --border-color:     #e2e8f0;
-    --border-focus:     #0e7490;
+    --bg-main: #f0f9ff;
+    --bg-card: #ffffff;
+    --text-dark: #0c1a2e;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --border-focus: #0e7490;
 
     /* — Shadows — */
-    --shadow-xs:  0 1px 2px 0 rgba(0, 0, 0, 0.04);
-    --shadow-sm:  0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0,0,0,0.05);
-    --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    --shadow-lg:  0 10px 25px -3px rgba(12, 45, 72, 0.12), 0 4px 10px -4px rgba(0, 0, 0, 0.07);
-    --shadow-xl:  0 20px 40px -5px rgba(12, 45, 72, 0.15), 0 8px 16px -6px rgba(0, 0, 0, 0.08);
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 25px -3px rgba(12, 45, 72, 0.12), 0 4px 10px -4px rgba(0, 0, 0, 0.07);
+    --shadow-xl: 0 20px 40px -5px rgba(12, 45, 72, 0.15), 0 8px 16px -6px rgba(0, 0, 0, 0.08);
 
     /* — Radii — */
-    --radius-xs:  4px;
-    --radius-sm:  8px;
-    --radius-md:  12px;
-    --radius-lg:  16px;
-    --radius-xl:  20px;
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
     --radius-full: 9999px;
 
     /* — Motion — */
@@ -47,7 +47,9 @@
 }
 
 /* ── Reset ── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -64,19 +66,36 @@ body {
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #7dd3fc; }
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #bae6fd;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #7dd3fc;
+}
 
 /* ── Sidebar (global admin sidebar) ── */
 .sidebar {
-    position: fixed; left: 0; top: 0;
-    width: 250px; height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 250px;
+    height: 100vh;
     background: var(--primary-dark);
     box-shadow: 4px 0 20px rgba(12, 45, 72, 0.25);
     z-index: 10;
-    display: flex; flex-direction: column;
+    display: flex;
+    flex-direction: column;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -87,7 +106,7 @@ body {
     font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     margin-bottom: 12px;
 }
 
@@ -102,7 +121,8 @@ body {
     border-left: 3px solid transparent;
 }
 
-.sidebar a:hover, .sidebar a.active {
+.sidebar a:hover,
+.sidebar a.active {
     background: rgba(14, 116, 144, 0.2);
     color: white;
     border-left-color: var(--primary);
@@ -110,11 +130,12 @@ body {
 
 .sidebar a.logout {
     margin-top: auto;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
     color: #fca5a5;
     padding-top: 20px;
     margin-top: 20px;
 }
+
 .sidebar a.logout:hover {
     background: rgba(220, 38, 38, 0.15);
     color: #fca5a5;
@@ -140,8 +161,18 @@ body {
     min-width: 250px;
     transition: var(--transition);
 }
-.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-.card-container { display: flex; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.card-container {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
 
 /* ── Tables ── */
 table {
@@ -155,7 +186,14 @@ table {
     border: 1px solid var(--border-color);
     overflow: hidden;
 }
-th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
+
+th,
+td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
 th {
     background: var(--primary-lighter);
     font-weight: 700;
@@ -164,11 +202,19 @@ th {
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background-color: var(--primary-lighter); }
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background-color: var(--primary-lighter);
+}
 
 /* ── Forms ── */
-input[type=text], input[type=password], select {
+input[type=text],
+input[type=password],
+select {
     width: 100%;
     padding: 12px 16px;
     margin: 8px 0;
@@ -180,7 +226,10 @@ input[type=text], input[type=password], select {
     color: var(--text-dark);
     background: white;
 }
-input[type=text]:focus, input[type=password]:focus, select:focus {
+
+input[type=text]:focus,
+input[type=password]:focus,
+select:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.12);
@@ -189,9 +238,13 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
 /* ── Login Page ── */
 .login-body {
     font-family: 'Inter', system-ui, sans-serif;
-    margin: 0; padding: 0; min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
     background: linear-gradient(145deg, #0c2d48 0%, #0e7490 50%, #0ea5e9 100%);
-    display: flex; justify-content: center; align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .login-card {
@@ -199,9 +252,35 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     padding: 48px 44px;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
-    width: 100%; max-width: 440px;
+    width: 100%;
+    max-width: 440px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.9);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.login-card.login-landscape {
+    max-width: 760px;
+    padding: 28px 32px;
+    text-align: left;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: center;
+}
+
+.login-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-col-left {
+    text-align: center;
+    border-right: 1px solid var(--border-color);
+    padding-right: 28px;
+}
+
+.login-col-right {
+    padding-left: 4px;
 }
 
 .login-card h1 {
@@ -222,7 +301,11 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     font-weight: 600;
 }
 
-.login-form-group { margin-bottom: 18px; text-align: left; }
+.login-form-group {
+    margin-bottom: 18px;
+    text-align: left;
+}
+
 .login-form-group label {
     display: block;
     font-size: 0.85rem;
@@ -230,6 +313,7 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     color: var(--primary-dark);
     margin-bottom: 6px;
 }
+
 .login-form-group input {
     width: 100%;
     padding: 13px 16px;
@@ -243,10 +327,45 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     background: #fafbfc;
     font-family: inherit;
 }
+
 .login-form-group input:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.12);
     background: white;
+}
+
+.password-field {
+    position: relative;
+    display: block;
+}
+
+.password-field input {
+    padding-right: 46px !important;
+    margin: 0 !important;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    border-radius: 9999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    line-height: 1;
+}
+
+.password-toggle:hover {
+    background: #f1f5f9;
+    color: var(--primary);
 }
 
 .submit-btn {
@@ -265,12 +384,16 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     box-shadow: 0 4px 14px rgba(14, 116, 144, 0.35);
     font-family: inherit;
 }
+
 .submit-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(14, 116, 144, 0.45);
     filter: brightness(1.05);
 }
-.submit-btn:active { transform: translateY(0); }
+
+.submit-btn:active {
+    transform: translateY(0);
+}
 
 .msg-error {
     background: var(--danger-light);
@@ -283,6 +406,7 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     border: 1px solid #fecaca;
     text-align: left;
 }
+
 .msg-success {
     background: var(--success-light);
     color: #065f46;
@@ -295,8 +419,14 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     text-align: left;
 }
 
-.mt-24 { margin-top: 24px; }
-.text-center { text-align: center; }
+.mt-24 {
+    margin-top: 24px;
+}
+
+.text-center {
+    text-align: center;
+}
+
 .link-primary {
     color: var(--primary);
     text-decoration: none;
@@ -304,11 +434,24 @@ input[type=text]:focus, input[type=password]:focus, select:focus {
     font-size: 0.9rem;
     transition: var(--transition);
 }
-.link-primary:hover { color: var(--primary-hover); text-decoration: underline; }
+
+.link-primary:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-    .sidebar { left: -250px; }
-    .sidebar.active { left: 0; }
-    .main { margin-left: 0; padding: 20px; }
+    .sidebar {
+        left: -250px;
+    }
+
+    .sidebar.active {
+        left: 0;
+    }
+
+    .main {
+        margin-left: 0;
+        padding: 20px;
+    }
 }

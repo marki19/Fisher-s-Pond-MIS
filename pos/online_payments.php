@@ -10,18 +10,17 @@ require __DIR__ . '/../config.php';
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
 $isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
-$isCashier = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3;
+// Restrict to Managers and Admins only!
+if (!$isAdmin && !$isManager) {
+    header("Location: ../employees/index.php");
+    exit;
+}
 
 $isClockedIn = false;
 if (isset($_SESSION['active_staffID'])) {
     $checkShift = $pdo->prepare("SELECT ShiftID FROM employeeshift WHERE StaffID = ? AND ClockOut IS NULL");
     $checkShift->execute([$_SESSION['active_staffID']]);
     $isClockedIn = $checkShift->fetch() ? true : false;
-}
-
-if (!$isSuperAdmin && !$isManager && !$isCashier) {
-    header("Location: ../employees/index.php");
-    exit;
 }
 
 if (!$isAdmin && !$isClockedIn) {
@@ -31,11 +30,12 @@ if (!$isAdmin && !$isClockedIn) {
     exit;
 }
 
-// Fetch all orders
+// Fetch all online orders
 $stmt = $pdo->query("
-    SELECT o.OrderID, o.GrandTotal, o.OrderDate, o.Status, o.PaymentMode, e.FirstName, e.LastName 
+    SELECT o.OrderID, o.GrandTotal, o.OrderDate, o.Status, o.PaymentPlatform, o.ReferenceNumber, e.FirstName, e.LastName 
     FROM orders o 
     LEFT JOIN employee e ON o.StaffID = e.staffID 
+    WHERE o.PaymentMode != 'Cash'
     ORDER BY o.OrderID DESC
 ");
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -61,7 +61,7 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orders History - <?= htmlspecialchars($storeName) ?></title>
+    <title>Online Payments - <?= htmlspecialchars($storeName) ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
     <style>
@@ -164,19 +164,19 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
         <?php include 'sidebar.php'; ?>
 
         <main class="page-content">
-            <h1 class="page-title">Transaction Log</h1>
+            <h1 class="page-title">Online Payments Verification</h1>
 
             <div class="table-container">
                 <?php if (empty($orders)): ?>
-                    <p class="text-muted text-center p-20">No actual orders found yet.</p>
+                    <p class="text-muted text-center p-20">No online payments recorded yet.</p>
                 <?php else: ?>
                     <table>
                         <thead>
                             <tr>
                                 <th>Order ID</th>
                                 <th>Date & Time</th>
-                                <th>Cashier</th>
-                                <th>Payment</th>
+                                <th>Platform</th>
+                                <th>Reference #</th>
                                 <th>Total</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -186,15 +186,10 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                             <?php foreach ($orders as $o): ?>
                                 <tr class="row-hover" onclick="openReceipt(<?= $o['OrderID'] ?>)">
                                     <td class="text-bold">#<?= str_pad($o['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
-                                    <td class="text-muted"><?= date('M j, Y h:i A', strtotime($o['OrderDate'])) ?></td>
+                                    <td class="text-muted"><?= date('M j, y h:i A', strtotime($o['OrderDate'])) ?></td>
+                                    <td style="font-weight:600; color:var(--primary-color);"><?= htmlspecialchars($o['PaymentPlatform']) ?></td>
+                                    <td style="font-family: monospace; font-size: 1.1rem; letter-spacing: 1px;"><?= htmlspecialchars($o['ReferenceNumber']) ?></td>
                                     <td><?= htmlspecialchars($o['FirstName'] ? ($o['FirstName'] . ' ' . $o['LastName']) : 'Admin') ?></td>
-                                    <td>
-                                        <?php if ($o['PaymentMode'] === 'Cash'): ?>
-                                            <span style="color: #27ae60; font-weight: 500;">Cash</span>
-                                        <?php else: ?>
-                                            <span style="color: #2980b9; font-weight: 500;">Online</span>
-                                        <?php endif; ?>
-                                    </td>
                                     <td class="item-total-bold">₱<?= number_format($o['GrandTotal'], 2) ?></td>
                                     <td><span
                                             class="status-badge status-<?= htmlspecialchars($o['Status']) ?>"><?= htmlspecialchars($o['Status']) ?></span>
@@ -394,11 +389,35 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                 <div class="print-center">Thank you! Please come again.</div>
             </div>`;
 
+            // Kitchen Ticket
+            let kitHtml = `
+            <div class="print-receipt">
+                <div class="print-header">
+                    <h2>KITCHEN TICKET</h2>
+                </div>
+                ${voidBanner}
+                <div class="print-bold" style="font-size:14px;">Order #: ${o.OrderID}</div>
+                <div>Date: ${o.OrderDate}</div>
+                <div class="print-bold" style="font-size:14px; margin: 5px 0;">Type: ${orderTypeStr}</div>
+                ${refHtml}
+                ${o.SpecialRequest ? `<div class="print-bold" style="font-size:16px; margin: 10px 0; border: 2px solid #000; padding: 5px;">*** NOTE: ${o.SpecialRequest} ***</div>` : ''}
+                <div class="print-divider"></div>
+                <table class="print-items">
+                    <thead><tr><th>Qty</th><th>Item</th></tr></thead>
+                    <tbody>`;
+            items.forEach(i => {
+                kitHtml += `<tr><td class="print-bold" style="font-size:14px;">${i.Quantity}x</td><td class="print-bold" style="font-size:14px;">${i.ItemName}</td></tr>`;
+            });
+            kitHtml += `</tbody></table>
+                <div class="print-divider"></div>
+                <div class="print-center">*** END OF TICKET ***</div>
+            </div>`;
+
             // Close the modal so the background doesn't get weird scrollbars
             document.getElementById('receiptModal').classList.add('hidden');
 
-            // Render and print only the Customer Receipt for history reprints
-            area.innerHTML = custHtml;
+            // Render and print
+            area.innerHTML = custHtml + kitHtml;
             window.print();
         }
 

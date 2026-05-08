@@ -8,10 +8,24 @@ session_start();
 require __DIR__ . '/../config.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
-$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'SuperAdmin';
+$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
 
+$isClockedIn = false;
+if (isset($_SESSION['active_staffID'])) {
+    $checkShift = $pdo->prepare("SELECT ShiftID FROM employeeshift WHERE StaffID = ? AND ClockOut IS NULL");
+    $checkShift->execute([$_SESSION['active_staffID']]);
+    $isClockedIn = $checkShift->fetch() ? true : false;
+}
+
 if (!$isSuperAdmin && !$isManager && !$isAdmin) {
+    header("Location: ../employees/index.php");
+    exit;
+}
+
+if (!$isAdmin && !$isClockedIn) {
+    $_SESSION['kiosk_msg'] = 'Access Denied: You must clock in first before accessing the POS Terminal.';
+    $_SESSION['kiosk_msg_type'] = 'error';
     header("Location: ../employees/index.php");
     exit;
 }
