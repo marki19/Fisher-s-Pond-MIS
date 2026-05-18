@@ -9,34 +9,38 @@ function ensureMenuStockColumns(PDO $pdo): void {
     }
 }
 
-function isDrinksCategory(PDO $pdo, int $categoryID): bool {
-    $stmt = $pdo->prepare("SELECT LOWER(TRIM(CategoryName)) FROM category WHERE CategoryID = ?");
+function isInventoryTrackedCategory(PDO $pdo, int $categoryID): bool {
+    ensureCategoryColumns($pdo);
+    $stmt = $pdo->prepare("SELECT IsInventoryTracked FROM category WHERE CategoryID = ?");
     $stmt->execute([$categoryID]);
-    return $stmt->fetchColumn() === 'drinks';
+    return (bool) $stmt->fetchColumn();
 }
 
-function ensureCategoryStatusColumn(PDO $pdo): void {
+function ensureCategoryColumns(PDO $pdo): void {
     $check = $pdo->query("SHOW COLUMNS FROM category LIKE 'IsActive'");
-    if ($check->fetch(PDO::FETCH_ASSOC)) {
-        return;
+    if (!$check->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec("ALTER TABLE category ADD COLUMN IsActive TINYINT(1) NOT NULL DEFAULT 1");
     }
-    $pdo->exec("ALTER TABLE category ADD COLUMN IsActive TINYINT(1) NOT NULL DEFAULT 1");
+    $check2 = $pdo->query("SHOW COLUMNS FROM category LIKE 'IsInventoryTracked'");
+    if (!$check2->fetch(PDO::FETCH_ASSOC)) {
+        $pdo->exec("ALTER TABLE category ADD COLUMN IsInventoryTracked TINYINT(1) NOT NULL DEFAULT 0");
+    }
 }
 
 function getCategories(PDO $pdo): array {
-    ensureCategoryStatusColumn($pdo);
+    ensureCategoryColumns($pdo);
     $stmt = $pdo->query("SELECT * FROM category WHERE IsActive = 1 ORDER BY CategoryName ASC");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function getAllCategories(PDO $pdo): array {
-    ensureCategoryStatusColumn($pdo);
+    ensureCategoryColumns($pdo);
     $stmt = $pdo->query("SELECT * FROM category ORDER BY CategoryName ASC");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function addCategory(PDO $pdo, string $name): bool {
-    ensureCategoryStatusColumn($pdo);
+function addCategory(PDO $pdo, string $name, int $isInventoryTracked = 0): bool {
+    ensureCategoryColumns($pdo);
     $name = ucwords(trim($name));
     if (empty($name)) return false;
     
@@ -45,12 +49,12 @@ function addCategory(PDO $pdo, string $name): bool {
     $check->execute([$name]);
     if ($check->fetchColumn() > 0) return false;
     
-    $stmt = $pdo->prepare("INSERT INTO category (CategoryName, IsActive) VALUES (?, 1)");
-    return $stmt->execute([$name]);
+    $stmt = $pdo->prepare("INSERT INTO category (CategoryName, IsActive, IsInventoryTracked) VALUES (?, 1, ?)");
+    return $stmt->execute([$name, $isInventoryTracked]);
 }
 
-function updateCategory(PDO $pdo, int $categoryID, string $name): bool {
-    ensureCategoryStatusColumn($pdo);
+function updateCategory(PDO $pdo, int $categoryID, string $name, int $isInventoryTracked = 0): bool {
+    ensureCategoryColumns($pdo);
     $name = ucwords(trim($name));
     if (empty($name)) return false;
     
@@ -59,12 +63,12 @@ function updateCategory(PDO $pdo, int $categoryID, string $name): bool {
     $check->execute([$name, $categoryID]);
     if ($check->fetchColumn() > 0) return false;
 
-    $stmt = $pdo->prepare("UPDATE category SET CategoryName = ? WHERE CategoryID = ?");
-    return $stmt->execute([$name, $categoryID]);
+    $stmt = $pdo->prepare("UPDATE category SET CategoryName = ?, IsInventoryTracked = ? WHERE CategoryID = ?");
+    return $stmt->execute([$name, $isInventoryTracked, $categoryID]);
 }
 
 function toggleCategoryAvailability(PDO $pdo, int $categoryID, int $status): array {
-    ensureCategoryStatusColumn($pdo);
+    ensureCategoryColumns($pdo);
 
     // If disabling a category, disable all items under it as well.
     if ((int) $status === 0) {
@@ -86,7 +90,7 @@ function toggleCategoryAvailability(PDO $pdo, int $categoryID, int $status): arr
 
 function getMenuItems(PDO $pdo, ?int $categoryID = null, bool $onlyAvailable = false): array {
     ensureMenuStockColumns($pdo);
-    $sql = "SELECT m.*, c.CategoryName 
+    $sql = "SELECT m.*, c.CategoryName, c.IsInventoryTracked 
             FROM menu_item m 
             JOIN category c ON m.CategoryID = c.CategoryID ";
     $params = [];
@@ -133,8 +137,8 @@ function addMenuItem(PDO $pdo, array $data, ?string $imagePath = null): bool {
     }
 
     $categoryID = (int) $data['CategoryID'];
-    $isDrink = isDrinksCategory($pdo, $categoryID);
-    $stockQty = $isDrink ? max(0, (float) ($data['StockQty'] ?? 0)) : 0;
+    $isTracked = isInventoryTrackedCategory($pdo, $categoryID);
+    $stockQty = $isTracked ? max(0, (float) ($data['StockQty'] ?? 0)) : 0;
 
     $sql = "INSERT INTO menu_item (CategoryID, ItemName, Price, IsAvailable, ImagePath, StockQty) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $pdo->prepare($sql);
@@ -163,8 +167,8 @@ function updateMenuItem(PDO $pdo, int $itemID, array $data, ?string $imagePath =
     }
 
     $categoryID = (int) $data['CategoryID'];
-    $isDrink = isDrinksCategory($pdo, $categoryID);
-    $stockQty = $isDrink ? max(0, (float) ($data['StockQty'] ?? 0)) : 0;
+    $isTracked = isInventoryTrackedCategory($pdo, $categoryID);
+    $stockQty = $isTracked ? max(0, (float) ($data['StockQty'] ?? 0)) : 0;
 
     if ($imagePath !== null) {
         $sql = "UPDATE menu_item SET CategoryID = ?, ItemName = ?, Price = ?, IsAvailable = ?, ImagePath = ?, StockQty = ? WHERE ItemID = ?";

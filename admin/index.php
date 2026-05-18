@@ -48,11 +48,10 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 <head>
     <meta charset="UTF-8">
     <title>Admin Panel | Fisher's Pond Seafood and Grill</title>
-    <?php if ($tab === 'attendance'): ?>
-        <meta http-equiv="refresh" content="60">
-    <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../assets/flatpickr.css">
+    <script src="../assets/flatpickr.js"></script>
 </head>
 
 <body>
@@ -137,6 +136,9 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             <?php endif; ?>
 
             <?php if ($tab === 'active' || $tab === 'deactivated'): ?>
+                <div style="margin-bottom: 16px;">
+                    <input type="text" id="employeeSearchInput" placeholder="Search employees by Name, ID, or Role..." style="width: 100%; max-width: 400px; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.95rem;" onkeyup="filterEmployeeTable()">
+                </div>
                 <table id="employeesTable">
                     <thead>
                         <tr>
@@ -203,6 +205,19 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                     </tbody>
                 </table>
             <?php elseif ($tab === 'attendance'): ?>
+                <div class="attendance-filters" style="display:flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                    <div class="form-group" style="margin-bottom:0; flex:1; min-width: 250px;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight:bold;">Date Range</label>
+                        <input type="text" id="attDateFilter" class="form-input" placeholder="📅 Click to select date range..." style="margin-top:4px; cursor: pointer; background-color: #fff;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0; flex:1; min-width: 200px;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight:bold;">Employee Search</label>
+                        <input type="text" id="attEmployeeSearch" class="form-input" placeholder="Search by name or ID..." style="margin-top:4px;">
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" style="padding: 10px 16px; margin: 0;" onclick="resetAttendanceFilters()">Reset Filters</button>
+                    </div>
+                </div>
                 <table id="attendanceTable">
                     <thead>
                         <tr>
@@ -211,6 +226,7 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                             <th>Date</th>
                             <th>Clock In</th>
                             <th>Clock Out</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -220,7 +236,9 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                                 <td><?= htmlspecialchars($att['FirstName'] . ' ' . $att['LastName']) ?></td>
                                 <td><?= htmlspecialchars($att['ShiftDate']) ?></td>
                                 <td><?= htmlspecialchars(date('h:i A', strtotime($att['ClockIn']))) ?></td>
-                                <td><?= $att['ClockOut'] ? htmlspecialchars(date('h:i A', strtotime($att['ClockOut']))) : '<span class="status-pending">Active Shift</span>' ?>
+                                <td><?= $att['ClockOut'] ? htmlspecialchars(date('h:i A', strtotime($att['ClockOut']))) : '<span class="status-pending">Active Shift</span>' ?></td>
+                                <td>
+                                    <button class="btn btn-secondary btn-small" onclick="openEditShiftModal(<?= (int)$att['ShiftID'] ?>, '<?= $att['ClockOut'] ? date('H:i', strtotime($att['ClockOut'])) : '' ?>', '<?= htmlspecialchars($att['ClockIn']) ?>')" style="padding: 6px 12px; margin: 0; font-size: 0.85rem;">Edit Shift</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -456,7 +474,17 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 
                         <div class="form-group">
                             <label>Contact Number</label>
-                            <input type="tel" name="ContactNumber" id="empContactNumber" required>
+                            <div style="display:flex; align-items:center; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; transition: var(--transition);" id="contactWrapper">
+                                <span style="background: var(--primary-lighter); color: var(--primary-dark); padding: 11px 12px; font-weight: 700; font-size: 0.92rem; border-right: 1.5px solid var(--border-color); white-space: nowrap;">+63</span>
+                                <input type="tel" name="ContactNumber" id="empContactNumber"
+                                    maxlength="10" pattern="[0-9]{10}"
+                                    title="Enter 10 digits after +63 (e.g. 9123456789)"
+                                    placeholder="9XXXXXXXXX"
+                                    style="border:none; outline:none; padding: 11px 14px; font-size: 0.92rem; font-family: inherit; width: 100%; background: white; color: var(--text-dark);"
+                                    oninput="this.value=this.value.replace(/\D/g,'')"
+                                    onfocus="document.getElementById('contactWrapper').style.borderColor='var(--primary)'; document.getElementById('contactWrapper').style.boxShadow='0 0 0 3px rgba(14,116,144,0.12)';"
+                                    onblur="document.getElementById('contactWrapper').style.borderColor='var(--border-color)'; document.getElementById('contactWrapper').style.boxShadow='none';"
+                                    required></div>
                         </div>
                     </div>
 
@@ -667,6 +695,30 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         </div>
     </div>
 
+    <!-- Edit Shift Modal -->
+    <div id="editShiftModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <button class="modal-close" onclick="closeEditShiftModal()">&times;</button>
+            <h2>Edit Shift</h2>
+            <p class="subtitle" style="margin-bottom: 12px; text-transform: none;">Set the clock-out time for this shift. Leave blank to keep it open (active shift).</p>
+            <div style="background: var(--primary-lighter); border: 1px solid #a5f3fc; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.88rem; color: var(--primary-dark); text-transform: none;">
+                ⏰ Employee clocked in at: <strong id="editShiftClockInDisplay">—</strong><br>
+                <span style="color: var(--text-muted);">Clock-out must be set to a time <em>after</em> the clock-in time shown above.</span>
+            </div>
+            <form method="POST" action="action.php">
+                <input type="hidden" name="action" value="edit_shift">
+                <input type="hidden" name="ShiftID" id="editShiftID">
+                <div class="form-group">
+                    <label>Clock Out Time</label>
+                    <input type="time" name="ClockOut" id="editShiftClockOut">
+                </div>
+                <div class="form-actions" style="margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary btn-full-width">Save Shift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function togglePassword(inputId, btn) {
             const input = document.getElementById(inputId);
@@ -683,7 +735,9 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             document.getElementById('empLastName').value = ln;
             document.getElementById('empBirthDate').value = bd;
             document.getElementById('empEmail').value = em;
-            document.getElementById('empContactNumber').value = cn;
+            // Strip +63 / 63 prefix so only the 10-digit part fills the field
+            var cnClean = cn.replace(/^\+63/, '').replace(/^63/, '').replace(/^0/, '');
+            document.getElementById('empContactNumber').value = cnClean;
             document.getElementById('empPositionID').value = pid;
 
             document.getElementById('modalTitle').innerText = id ? 'Edit Employee' : 'Add Employee';
@@ -710,12 +764,32 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
         function openTaxModal() { document.getElementById('taxModal').style.display = 'flex'; }
         function closeTaxModal() { document.getElementById('taxModal').style.display = 'none'; }
 
+        function openEditShiftModal(shiftId, clockOut, clockIn) {
+            document.getElementById('editShiftID').value = shiftId;
+            document.getElementById('editShiftClockOut').value = clockOut;
+            // Show the ClockIn time so admin knows the minimum valid time
+            var display = clockIn ? clockIn.substring(11, 16) : 'Unknown';
+            // Format to 12h for readability
+            if (clockIn) {
+                var parts = clockIn.substring(11, 16).split(':');
+                var h = parseInt(parts[0]);
+                var m = parts[1];
+                var ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                display = h + ':' + m + ' ' + ampm;
+            }
+            document.getElementById('editShiftClockInDisplay').textContent = display;
+            document.getElementById('editShiftModal').style.display = 'flex';
+        }
+        function closeEditShiftModal() { document.getElementById('editShiftModal').style.display = 'none'; }
+
         window.onclick = function (event) {
             if (event.target == document.getElementById('employeeModal')) closeModal();
             if (event.target == document.getElementById('addAdminModal')) closeAddAdminModal();
             if (event.target == document.getElementById('editAdminModal')) closeEditAdminModal();
             if (event.target == document.getElementById('manageAdminModal')) closeManageAdminModal();
             if (event.target == document.getElementById('taxModal')) closeTaxModal();
+            if (event.target == document.getElementById('editShiftModal')) closeEditShiftModal();
         }
     </script>
 
@@ -805,6 +879,45 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 
         document.addEventListener('DOMContentLoaded', () => {
             paginateTable('employeesTable', 10);
+            
+            // Only paginate attendance if we are not actively filtering
+            // Actually, filtering breaks pagination if we don't re-render, so let's just paginate initially.
+            // Better: when filters are applied, remove pagination or re-paginate visible rows.
+            // For now, let's keep it simple and let the filter logic handle showing/hiding on the current page,
+            // or just disable pagination when filtering. Let's just run it initially.
+        function filterEmployeeTable() {
+            const input = document.getElementById('employeeSearchInput');
+            if (!input) return;
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('employeesTable');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            // disable pagination when searching
+            const controls = table.nextElementSibling;
+            if (controls && controls.classList.contains('pagination-controls')) {
+                controls.style.display = filter ? 'none' : '';
+            }
+
+            rows.forEach(row => {
+                if(row.querySelector('.table-empty')) return;
+                
+                if (filter) {
+                    row.classList.remove('hidden-row');
+                } else {
+                    // let paginateTable handle it, or just re-run pagination
+                }
+
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+            
+            if (!filter) {
+                paginateTable('employeesTable', 10);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            paginateTable('employeesTable', 10);
             paginateTable('attendanceTable', 10);
             paginateTable('adminUsersTable', 10);
 
@@ -820,7 +933,65 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                 bdateInput.max = `${year18Ago}-${month}-${day}`;
             }
         });
-    </script>
-</body>
 
+        <?php if ($tab === 'attendance'): ?>
+        // Flatpickr initialized in separate script below
+        <?php endif; ?>
+    </script>
+
+    <?php if ($tab === 'attendance'): ?>
+    <script>
+        var fp = flatpickr(document.getElementById('attDateFilter'), {
+            mode: 'range',
+            dateFormat: 'Y-m-d',
+            onChange: function(selectedDates) {
+                filterAttendance(selectedDates);
+            }
+        });
+
+        document.getElementById('attEmployeeSearch').addEventListener('keyup', function() {
+            filterAttendance(fp.selectedDates);
+        });
+
+        function filterAttendance(dates) {
+            if (!dates) dates = fp.selectedDates;
+            var employeeSearch = document.getElementById('attEmployeeSearch').value.toLowerCase();
+            var rows = document.querySelectorAll('#attendanceTable tbody tr');
+            var controls = document.querySelector('#attendanceTable') ? document.querySelector('#attendanceTable').nextElementSibling : null;
+            if (controls && controls.classList.contains('pagination-controls')) {
+                controls.style.display = 'none';
+            }
+            rows.forEach(function(row) {
+                if (row.querySelector('.table-empty')) return;
+                row.classList.remove('hidden-row');
+                var show = true;
+                var empName = row.cells[1] ? row.cells[1].innerText.toLowerCase() : '';
+                var empId   = row.cells[0] ? row.cells[0].innerText.toLowerCase() : '';
+                if (employeeSearch && !empName.includes(employeeSearch) && !empId.includes(employeeSearch)) {
+                    show = false;
+                }
+                if (show && dates && dates.length === 2) {
+                    var rowDate = new Date(row.cells[2].innerText);
+                    rowDate.setHours(0,0,0,0);
+                    var start = new Date(dates[0]); start.setHours(0,0,0,0);
+                    var end   = new Date(dates[1]); end.setHours(0,0,0,0);
+                    if (rowDate < start || rowDate > end) show = false;
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        window.resetAttendanceFilters = function() {
+            fp.clear();
+            document.getElementById('attEmployeeSearch').value = '';
+            filterAttendance([]);
+            var controls = document.querySelector('#attendanceTable') ? document.querySelector('#attendanceTable').nextElementSibling : null;
+            if (controls && controls.classList.contains('pagination-controls')) {
+                controls.style.display = '';
+                paginateTable('attendanceTable', 10);
+            }
+        };
+    </script>
+    <?php endif; ?>
+</body>
 </html>

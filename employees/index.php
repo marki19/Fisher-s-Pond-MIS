@@ -204,6 +204,8 @@ if ($loggedIn && $view === 'default') {
                         <div class="form-group">
                             <label>Contact Number</label><input type="tel" name="ContactNumber"
                                 value="<?= htmlspecialchars($emp['ContactNumber']) ?>"
+                                pattern="^(09|\+639)\d{9}$"
+                                title="Enter an 11-digit number starting with 09 or +639 (e.g. 09123456789 or +639123456789)"
                                 class="w-full p-12 border-gray rounded-8" required>
                         </div>
                     </div>
@@ -260,22 +262,44 @@ if ($loggedIn && $view === 'default') {
 
         <?php elseif ($view === 'my_status'):
             $staffID = $_SESSION['active_staffID'];
+            
+            $filterMonth = $_GET['month'] ?? '';
+            $filterYear = $_GET['year'] ?? '';
+            $isFiltered = !empty($filterMonth) && !empty($filterYear);
 
-            // Get recent shifts
-            $stmtShifts = $pdo->prepare("SELECT ShiftDate, ClockIn, ClockOut FROM employeeshift WHERE StaffID = ? ORDER BY ShiftDate DESC, ClockIn DESC LIMIT 5");
-            $stmtShifts->execute([$staffID]);
-            $shifts = $stmtShifts->fetchAll(PDO::FETCH_ASSOC);
+            if ($isFiltered) {
+                // Get filtered shifts
+                $stmtShifts = $pdo->prepare("SELECT ShiftDate, ClockIn, ClockOut FROM employeeshift WHERE StaffID = ? AND MONTH(ShiftDate) = ? AND YEAR(ShiftDate) = ? ORDER BY ShiftDate DESC, ClockIn DESC");
+                $stmtShifts->execute([$staffID, $filterMonth, $filterYear]);
+                $shifts = $stmtShifts->fetchAll(PDO::FETCH_ASSOC);
 
-            // Get recent payroll
-            $stmtPayroll = $pdo->prepare("
-                SELECT pr.*, pp.StartDate, pp.EndDate, pp.GeneratedDate 
-                FROM payroll_record pr 
-                JOIN payroll_period pp ON pr.PeriodID = pp.PeriodID 
-                WHERE pr.StaffID = ? 
-                ORDER BY pp.PeriodID DESC LIMIT 5
-            ");
-            $stmtPayroll->execute([$staffID]);
-            $payrolls = $stmtPayroll->fetchAll(PDO::FETCH_ASSOC);
+                // Get filtered payroll
+                $stmtPayroll = $pdo->prepare("
+                    SELECT pr.*, pp.StartDate, pp.EndDate, pp.GeneratedDate 
+                    FROM payroll_record pr 
+                    JOIN payroll_period pp ON pr.PeriodID = pp.PeriodID 
+                    WHERE pr.StaffID = ? AND MONTH(pp.StartDate) = ? AND YEAR(pp.StartDate) = ?
+                    ORDER BY pp.PeriodID DESC
+                ");
+                $stmtPayroll->execute([$staffID, $filterMonth, $filterYear]);
+                $payrolls = $stmtPayroll->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                // Get recent shifts
+                $stmtShifts = $pdo->prepare("SELECT ShiftDate, ClockIn, ClockOut FROM employeeshift WHERE StaffID = ? ORDER BY ShiftDate DESC, ClockIn DESC LIMIT 5");
+                $stmtShifts->execute([$staffID]);
+                $shifts = $stmtShifts->fetchAll(PDO::FETCH_ASSOC);
+
+                // Get recent payroll
+                $stmtPayroll = $pdo->prepare("
+                    SELECT pr.*, pp.StartDate, pp.EndDate, pp.GeneratedDate 
+                    FROM payroll_record pr 
+                    JOIN payroll_period pp ON pr.PeriodID = pp.PeriodID 
+                    WHERE pr.StaffID = ? 
+                    ORDER BY pp.PeriodID DESC LIMIT 5
+                ");
+                $stmtPayroll->execute([$staffID]);
+                $payrolls = $stmtPayroll->fetchAll(PDO::FETCH_ASSOC);
+            }
             ?>
             <div class="status-header">
                 <div class="flex-column" style="text-align: left;">
@@ -290,6 +314,40 @@ if ($loggedIn && $view === 'default') {
             </div>
 
             <div class="status-grid">
+            
+            <!-- Filters -->
+            <form method="GET" action="index.php" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; background: #fff; padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; grid-column: 1 / -1;">
+                <input type="hidden" name="v" value="my_status">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Month</label>
+                    <select name="month" class="w-full p-12 border-gray rounded-8 font-1rem" style="padding: 10px;" required onchange="if(this.form.year.value) this.form.submit();">
+                        <option value="">-- Select Month --</option>
+                        <?php 
+                        for ($m=1; $m<=12; ++$m) {
+                            $selected = ($filterMonth == $m) ? 'selected' : '';
+                            echo '<option value="'.$m.'" '.$selected.'>'.date('F', mktime(0,0,0,$m,1)).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Year</label>
+                    <select name="year" class="w-full p-12 border-gray rounded-8 font-1rem" style="padding: 10px;" required onchange="if(this.form.month.value) this.form.submit();">
+                        <option value="">-- Select Year --</option>
+                        <?php 
+                        $currentYear = date('Y');
+                        for ($y=$currentYear; $y>=($currentYear-5); --$y) {
+                            $selected = ($filterYear == $y) ? 'selected' : '';
+                            echo '<option value="'.$y.'" '.$selected.'>'.$y.'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                <?php if ($isFiltered): ?>
+                    <a href="?v=my_status" class="btn btn-secondary" style="flex: 0 0 auto; width: auto; padding: 12px 20px; margin: 0;">Clear</a>
+                <?php endif; ?>
+            </form>
+
                 <!-- Column 1: Shifts -->
                 <div class="status-column">
                     <h3 class="text-lg mb-16"
@@ -299,7 +357,7 @@ if ($loggedIn && $view === 'default') {
                         <p class="text-muted-sm" style="text-align: left;">No recent shifts found.</p>
                     <?php else: ?>
                         <div class="table-responsive"
-                            style="max-height: 250px; overflow-y: auto; border-bottom: 1px solid #e2e8f0;">
+                            style="max-height: 300px; overflow-y: auto; border-bottom: 1px solid #e2e8f0;">
                             <table class="w-full text-left" style="font-size: 0.95rem; border-collapse: collapse;">
                                 <thead>
                                     <tr>
@@ -339,7 +397,7 @@ if ($loggedIn && $view === 'default') {
                         <p class="text-muted-sm" style="text-align: left;">No recent payroll found.</p>
                     <?php else: ?>
                         <div class="table-responsive"
-                            style="max-height: 250px; overflow-y: auto; border-bottom: 1px solid #e2e8f0;">
+                            style="max-height: 300px; overflow-y: auto; border-bottom: 1px solid #e2e8f0;">
                             <table class="w-full text-left" style="font-size: 0.95rem; border-collapse: collapse;">
                                 <thead>
                                     <tr>

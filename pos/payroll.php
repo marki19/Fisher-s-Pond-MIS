@@ -51,6 +51,41 @@ $payrollTaxRate = (float)($storeSettings['payroll_tax_rate'] ?? 0.05);
 $msg = '';
 $msgType = '';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'adjust_hours') {
+    $recordId = (int)($_POST['RecordID'] ?? 0);
+    $newHours = (float)($_POST['TotalHours'] ?? -1);
+    $periodId = (int)($_POST['PeriodID'] ?? 0);
+
+    if ($recordId <= 0 || $newHours < 0 || $newHours > 24) {
+        $_SESSION['payroll_msg'] = 'Invalid hours value. Must be between 0 and 24.';
+        $_SESSION['payroll_msg_type'] = 'error';
+        header("Location: payroll.php" . ($periodId ? "?period=$periodId" : ''));
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM payroll_record WHERE RecordID = ?");
+    $stmt->execute([$recordId]);
+    $record = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($record) {
+        $rate       = floatval($record['BaseRate']);
+        $hourlyRate = $rate / 8;
+        $gross      = $newHours * $hourlyRate;
+        $tax        = $gross * $payrollTaxRate;
+        $net        = $gross - $tax;
+
+        $update = $pdo->prepare("UPDATE payroll_record SET TotalHours = ?, GrossPay = ?, TaxDeduction = ?, NetPay = ? WHERE RecordID = ?");
+        $update->execute([$newHours, $gross, $tax, $net, $recordId]);
+        $_SESSION['payroll_msg'] = 'Hours adjusted and pay recalculated successfully.';
+        $_SESSION['payroll_msg_type'] = 'success';
+    } else {
+        $_SESSION['payroll_msg'] = 'Payroll record not found.';
+        $_SESSION['payroll_msg_type'] = 'error';
+    }
+    header("Location: payroll.php" . ($periodId ? "?period=$periodId" : ''));
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generate') {
     $startDate = $_POST['StartDate'] ?? '';
     $endDate = $_POST['EndDate'] ?? '';
@@ -61,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt = $pdo->prepare("
                 SELECT 
                     e.staffID, p.BaseRate,
-                    COUNT(DISTINCT DATE(s.ShiftDate)) as TotalDays
+                    SUM(LEAST(TIMESTAMPDIFF(SECOND, s.ClockIn, s.ClockOut), 12 * 3600)) / 3600 as ExactHoursWorked
                 FROM employeeshift s
                 JOIN employee e ON s.StaffID = e.staffID
                 JOIN position p ON e.PositionID = p.PositionID
@@ -88,14 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 ");
                 
                 foreach ($unpaidShifts as $row) {
-                    $days = floatval($row['TotalDays']);
-                    $rate = floatval($row['BaseRate']);
-                    $gross = $days * $rate;
+                    $hours = floatval($row['ExactHoursWorked']);
+                    $rate = floatval($row['BaseRate']); // Rate is PER DAY
+                    // Assume 1 full day is 8 hours
+                    $hourlyRate = $rate / 8;
+                    
+                    $gross = $hours * $hourlyRate;
                     $tax = $gross * $payrollTaxRate;
                     $net = $gross - $tax;
                     
                     $stmtInsertRecord->execute([
-                        $periodId, $row['staffID'], $days, $rate, $gross, $tax, $net
+                        $periodId, $row['staffID'], $hours, $rate, $gross, $tax, $net
                     ]);
                 }
                 
@@ -168,6 +206,14 @@ if ($viewPeriod) {
             </header>
 
             <div class="page-content">
+                <?php
+                $payrollMsg = $_SESSION['payroll_msg'] ?? '';
+                $payrollMsgType = $_SESSION['payroll_msg_type'] ?? '';
+                unset($_SESSION['payroll_msg'], $_SESSION['payroll_msg_type']);
+                if ($payrollMsg): ?>
+                    <div class="alert-box alert-<?= $payrollMsgType ?> mb-20"><?= htmlspecialchars($payrollMsg) ?></div>
+                <?php endif; ?>
+
                 <?php if ($msg): ?>
                     <div class="alert-box alert-<?= $msgType ?> mb-20"><?= htmlspecialchars($msg) ?></div>
                 <?php endif; ?>
@@ -240,10 +286,11 @@ if ($viewPeriod) {
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Base Rate</th>
-                                <th>Total Days</th>
+                                <th>Total Hours</th>
                                 <th>Gross Pay</th>
                                 <th>Tax Deduction</th>
                                 <th>Net Pay</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -253,10 +300,11 @@ if ($viewPeriod) {
                                 <td><?= htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']) ?> <?= !$row['IsActive'] ? '<span class="status-badge status-Voided">Inactive</span>' : '' ?></td>
                                 <td><?= htmlspecialchars($row['PositionName']) ?></td>
                                 <td>₱<?= number_format($row['BaseRate'], 2) ?>/day</td>
-                                <td><?= number_format($row['TotalHours'], 0) ?> day(s)</td>
-                                <td>₱<?= number_format($row['GrossPay'], 2) ?></td>
-                                <td class="text-danger">-₱<?= number_format($row['TaxDeduction'], 2) ?></td>
-                                <td class="item-total-bold text-success">₱<?= number_format($row['NetPay'], 2) ?></td>
+                                <td><?= number_format($row['TotalHours'], 2) ?> hrs</td>
+                                <td>₱<span id="gross-<?= $row['RecordID'] ?>"><?= number_format($row['GrossPay'], 2) ?></span></td>
+                                <td class="text-danger">-₱<span id="tax-<?= $row['RecordID'] ?>"><?= number_format($row['TaxDeduction'], 2) ?></span></td>
+                                <td class="item-total-bold text-success">₱<span id="net-<?= $row['RecordID'] ?>"><?= number_format($row['NetPay'], 2) ?></span></td>
+                                <td><button class="btn btn-outline btn-border-gray btn-small" onclick="openAdjustHoursModal(<?= $row['RecordID'] ?>, <?= $row['TotalHours'] ?>, <?= $viewPeriod ?>)">Adjust Hours</button></td>
                             </tr>
                             <?php endforeach; ?>
                             <?php if(empty($payrollRecords)): ?>
@@ -269,6 +317,42 @@ if ($viewPeriod) {
             </div>
         </main>
     </div>
+    </div>
+    
+    <!-- Adjust Hours Modal -->
+    <div id="adjustHoursModal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 400px;">
+            <button class="modal-close" type="button" onclick="closeAdjustHoursModal()">&times;</button>
+            <h3>Adjust Total Hours</h3>
+            <p class="subtitle" style="margin-bottom: 20px;">Changing hours will recalculate gross pay, tax, and net pay for this employee in this payroll period.</p>
+            <form method="POST" action="payroll.php">
+                <input type="hidden" name="action" value="adjust_hours">
+                <input type="hidden" name="RecordID" id="adjustRecordID">
+                <input type="hidden" name="PeriodID" id="adjustPeriodID">
+                <div class="form-group">
+                    <label>Total Hours (0 &ndash; 24)</label>
+                    <input type="number" name="TotalHours" id="adjustTotalHours" step="0.01" min="0" max="24" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full-width" style="margin-top: 10px;">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAdjustHoursModal(recordId, currentHours, periodId) {
+            document.getElementById('adjustRecordID').value = recordId;
+            document.getElementById('adjustTotalHours').value = currentHours;
+            document.getElementById('adjustPeriodID').value = periodId;
+            document.getElementById('adjustHoursModal').classList.remove('hidden');
+            document.getElementById('adjustHoursModal').style.display = 'flex';
+        }
+        function closeAdjustHoursModal() {
+            document.getElementById('adjustHoursModal').classList.add('hidden');
+            document.getElementById('adjustHoursModal').style.display = 'none';
+        }
+        window.onclick = function(e) {
+            if (e.target === document.getElementById('adjustHoursModal')) closeAdjustHoursModal();
+        };
     </script>
 </body>
 </html>

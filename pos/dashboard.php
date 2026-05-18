@@ -127,12 +127,12 @@ $itemPerformances = $dssItemsStmt->fetchAll(PDO::FETCH_ASSOC);
 $topItems = array_slice($itemPerformances, 0, 3);
 $bottomItems = array_slice(array_reverse($itemPerformances), 0, 3);
 
-// 2. Smart Inventory Alerts (Lowest 10 drinks)
+// 2. Smart Inventory Alerts (Lowest 10 tracked items)
 $dssStockStmt = $pdo->prepare("
     SELECT m.ItemName, m.StockQty
     FROM menu_item m
     JOIN category c ON m.CategoryID = c.CategoryID
-    WHERE LOWER(c.CategoryName) = 'drinks' AND m.IsAvailable = 1
+    WHERE c.IsInventoryTracked = 1 AND m.IsAvailable = 1
     ORDER BY m.StockQty ASC LIMIT 10
 ");
 $dssStockStmt->execute();
@@ -188,7 +188,7 @@ foreach ($peakData as $p) {
     <title>Dashboard - Fisher's Pond Seafood and Grill</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../assets/chart.js"></script>
 </head>
 
 <body>
@@ -298,7 +298,7 @@ foreach ($peakData as $p) {
                         style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc; height: 300px; position: relative;">
                         <h3
                             style="margin-top: 0; font-size: 1rem; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-                            Drinks Inventory Alert (Lowest 10)</h3>
+                            Tracked Inventory Alert (Lowest 10)</h3>
                         <div style="position: relative; height: calc(100% - 40px); width: 100%;">
                             <canvas id="dssStockChart"></canvas>
                         </div>

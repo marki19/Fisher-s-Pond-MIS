@@ -99,7 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "Failed to adjust stock.";
         }
     } elseif ($action === 'add_cat') {
-        if (addCategory($pdo, $_POST['CategoryName'] ?? '')) {
+        $isTracked = isset($_POST['IsInventoryTracked']) ? 1 : 0;
+        if (addCategory($pdo, $_POST['CategoryName'] ?? '', $isTracked)) {
             $msg = "Category added successfully.";
             $msgType = 'success';
         } else {
@@ -107,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'edit_cat') {
         $catID = (int) ($_POST['CategoryID'] ?? 0);
-        if (updateCategory($pdo, $catID, $_POST['CategoryName'] ?? '')) {
+        $isTracked = isset($_POST['IsInventoryTracked']) ? 1 : 0;
+        if (updateCategory($pdo, $catID, $_POST['CategoryName'] ?? '', $isTracked)) {
             $msg = "Category updated successfully.";
             $msgType = 'success';
         } else {
@@ -236,7 +238,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                             <td class="item-total-bold text-primary">
                                                 ₱<?= number_format($item['Price'], 2) ?></td>
                                             <td>
-                                                <?php if (strtolower(trim($item['CategoryName'])) === 'drinks'): ?>
+                                                <?php if ((int)($item['IsInventoryTracked'] ?? 0) === 1): ?>
                                                     <div class="flex-row-gap" style="gap:6px; align-items:center;">
                                                         <span class="text-bold"><?= number_format((float) ($item['StockQty'] ?? 0), 0) ?></span>
                                                         <button type="button" class="btn btn-outline btn-small" style="margin:0; padding:5px 8px;"
@@ -300,14 +302,18 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                 style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
                                 <h3 style="font-size: 1.1rem;">Add Category</h3>
                             </div>
-                            <form method="POST" class="flex-row-gap" style="align-items: flex-end;">
+                            <form method="POST" style="display:flex; flex-direction:column; gap:12px;">
                                 <input type="hidden" name="action" value="add_cat">
-                                <div class="form-group-inline mb-0" style="flex: 1; margin: 0;">
+                                <div class="form-group-inline mb-0" style="margin: 0;">
                                     <input type="text" name="CategoryName" placeholder="New Category Name" required
                                         class="form-input form-input-nomargin">
                                 </div>
-                                <button type="submit" class="btn btn-outline btn-border-gray"
-                                    style="margin: 0; padding: 12px 16px; white-space: nowrap;">Add</button>
+                                <div class="form-group-inline mb-0" style="margin: 0; display:flex; align-items:center; gap:8px;">
+                                    <input type="checkbox" name="IsInventoryTracked" id="add_IsInventoryTracked" value="1">
+                                    <label for="add_IsInventoryTracked" style="margin:0; font-size:0.85rem; white-space:nowrap;">Track Stock</label>
+                                </div>
+                                <button type="submit" class="btn btn-outline btn-border-gray btn-full-width"
+                                    style="margin: 0; padding: 12px 16px;">Add Category</button>
                             </form>
                         </div>
 
@@ -328,7 +334,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                             <div class="flex-row-gap" style="gap: 8px;">
                                                 <button class="btn btn-outline btn-small btn-edit"
                                                     style="margin: 0; padding: 6px 10px;"
-                                                    onclick="editCategory(<?= $cat['CategoryID'] ?>, <?= htmlspecialchars(json_encode($cat['CategoryName'])) ?>)">Edit</button>
+                                                    onclick="editCategory(<?= $cat['CategoryID'] ?>, <?= htmlspecialchars(json_encode($cat['CategoryName'])) ?>, <?= (int) ($cat['IsInventoryTracked'] ?? 0) ?>)">Edit</button>
                                                 <form method="POST" style="margin: 0; display: inline-block;"
                                                     onsubmit="return confirm('Are you sure you want to <?= ((int) ($cat['IsActive'] ?? 1) === 1) ? 'disable' : 'enable' ?> this category?');">
                                                     <input type="hidden" name="action" value="delete_cat">
@@ -377,9 +383,9 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                         <div class="form-group-inline mb-15">
                             <label>Category Group</label>
                             <select name="CategoryID" required class="form-input" onchange="toggleAddStock(this)">
-                                <option value="" disabled selected data-name="">-- Select Category --</option>
+                                    <option value="" disabled selected data-tracked="0">-- Select Category --</option>
                                 <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= $cat['CategoryID'] ?>" data-name="<?= htmlspecialchars($cat['CategoryName']) ?>">
+                                    <option value="<?= $cat['CategoryID'] ?>" data-tracked="<?= (int)($cat['IsInventoryTracked'] ?? 0) ?>">
                                         <?= htmlspecialchars($cat['CategoryName']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -399,8 +405,8 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                             <input type="number" step="0.01" min="0" name="Price" required class="form-input">
                         </div>
                         <div class="form-group-inline mb-15">
-                            <label>Initial Stock (Drinks only)</label>
-                            <input type="number" step="1" min="0" name="StockQty" id="add_StockQty" value="0" class="form-input" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                            <label>Initial Stock (If Tracked)</label>
+                            <input type="number" step="1" min="0" name="StockQty" id="add_StockQty" value="0" class="form-input" onkeypress="return event.charCode >= 48 && event.charCode <= 57" disabled>
                         </div>
                         <div class="form-group-inline mb-15">
                             <label>Current Status</label>
@@ -456,7 +462,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                             <label>Category Group</label>
                             <select name="CategoryID" id="edit_CategoryID" required class="form-input">
                                 <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= $cat['CategoryID'] ?>"><?= htmlspecialchars($cat['CategoryName']) ?>
+                                    <option value="<?= $cat['CategoryID'] ?>" data-tracked="<?= (int)($cat['IsInventoryTracked'] ?? 0) ?>"><?= htmlspecialchars($cat['CategoryName']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -476,7 +482,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                 class="form-input">
                         </div>
                         <div class="form-group-inline mb-15" style="margin-bottom: 0;">
-                            <label>Stock Qty (Drinks only)</label>
+                            <label>Stock Qty (If Tracked)</label>
                             <input type="number" step="1" min="0" name="StockQty" id="edit_StockQty" class="form-input" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                         </div>
                         <div class="form-group-inline mb-15" style="margin-bottom: 0;">
@@ -523,6 +529,10 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                     <label>Category Name</label>
                     <input type="text" name="CategoryName" id="edit_CatName" required class="form-input">
                 </div>
+                <div class="form-group-inline mb-20" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" name="IsInventoryTracked" id="edit_CatTracked" value="1">
+                    <label for="edit_CatTracked" style="margin:0; font-size: 0.95rem;">Track Stock (Enable Inventory System)</label>
+                </div>
                 <button type="submit" class="btn btn-clock-in btn-full-width">Save Changes</button>
             </form>
         </div>
@@ -531,12 +541,12 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
     <div id="stockAdjustModal" class="modal-overlay hidden">
         <div class="modal" style="max-width: 420px;">
             <button class="modal-close" onclick="closeStockAdjustModal()">&times;</button>
-            <h3>Adjust Drink Stock</h3>
+            <h3>Adjust Item Stock</h3>
             <form method="POST" class="mt-20">
                 <input type="hidden" name="action" value="adjust_stock">
                 <input type="hidden" name="ItemID" id="stockAdjustItemID">
                 <div class="form-group-inline mb-15">
-                    <label>Drink</label>
+                    <label>Item Name</label>
                     <input type="text" id="stockAdjustItemName" class="form-input" disabled>
                 </div>
                 <div class="form-group-inline mb-15">
@@ -568,7 +578,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
             document.getElementById('edit_IsAvailable').value = item.IsAvailable;
             
             const stockInput = document.getElementById('edit_StockQty');
-            if (item.CategoryName && item.CategoryName.toLowerCase() === 'drinks') {
+            if (parseInt(item.IsInventoryTracked || 0) === 1) {
                 stockInput.disabled = false;
                 stockInput.value = parseInt(item.StockQty) || 0;
             } else {
@@ -580,9 +590,10 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
             document.getElementById('editModal').style.display = 'flex';
         }
 
-        function editCategory(id, name) {
+        function editCategory(id, name, tracked) {
             document.getElementById('edit_CatID').value = id;
             document.getElementById('edit_CatName').value = name;
+            document.getElementById('edit_CatTracked').checked = (tracked == 1);
             document.getElementById('editCatModal').classList.remove('hidden');
             document.getElementById('editCatModal').style.display = 'flex';
         }
@@ -604,10 +615,10 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
 
         function toggleAddStock(selectElem) {
             const selectedOption = selectElem.options[selectElem.selectedIndex];
-            const catName = selectedOption.getAttribute('data-name');
+            const tracked = parseInt(selectedOption.getAttribute('data-tracked') || 0);
             const stockInput = document.getElementById('add_StockQty');
             
-            if (catName && catName.toLowerCase() === 'drinks') {
+            if (tracked === 1) {
                 stockInput.disabled = false;
             } else {
                 stockInput.disabled = true;

@@ -64,6 +64,8 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
     <title>Orders History - <?= htmlspecialchars($storeName) ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../assets/flatpickr.css">
+    <script src="../assets/flatpickr.js"></script>
     <style>
         /* Thermal Receipt Print Styles */
         #print-area {
@@ -165,6 +167,24 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
 
         <main class="page-content">
             <h1 class="page-title">Transaction Log</h1>
+            
+            <div style="display:flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                <div class="form-group-inline mb-0" style="margin:0; flex:1; min-width: 250px;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight:bold;">Date Range</label>
+                    <input type="text" id="orderDateFilter" class="form-input" placeholder="Select Date Range..." style="margin-top:4px;">
+                </div>
+                <div class="form-group-inline mb-0" style="margin:0; flex:1; min-width: 200px;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight:bold;">Order Status</label>
+                    <select id="orderStatusFilter" class="form-input" style="margin-top:4px;">
+                        <option value="all">All Statuses</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Voided">Voided</option>
+                    </select>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" style="padding: 10px 16px; margin: 0;" onclick="resetOrderFilters()">Reset</button>
+                </div>
+            </div>
 
             <div class="table-container">
                 <?php if (empty($orders)): ?>
@@ -401,6 +421,55 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
             area.innerHTML = custHtml;
             window.print();
         }
+        
+        // --- Filters Implementation ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const fp = flatpickr("#orderDateFilter", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                onChange: filterOrders
+            });
+
+            document.getElementById('orderStatusFilter').addEventListener('change', filterOrders);
+
+            function filterOrders() {
+                const dates = fp.selectedDates;
+                const status = document.getElementById('orderStatusFilter').value;
+                const rows = document.querySelectorAll('.table-container tbody tr');
+                
+                rows.forEach(row => {
+                    let show = true;
+                    
+                    if (status !== 'all') {
+                        const rowStatus = row.cells[5].innerText.trim();
+                        if (rowStatus !== status) {
+                            show = false;
+                        }
+                    }
+
+                    if (show && dates.length === 2) {
+                        const rowDateStr = row.cells[1].innerText; // e.g. May 17, 2026 08:30 PM
+                        const rowDate = new Date(rowDateStr);
+                        rowDate.setHours(0,0,0,0);
+                        
+                        const start = new Date(dates[0]); start.setHours(0,0,0,0);
+                        const end = new Date(dates[1]); end.setHours(0,0,0,0);
+
+                        if (rowDate < start || rowDate > end) {
+                            show = false;
+                        }
+                    }
+
+                    row.style.display = show ? '' : 'none';
+                });
+            }
+
+            window.resetOrderFilters = function() {
+                fp.clear();
+                document.getElementById('orderStatusFilter').value = 'all';
+                filterOrders();
+            };
+        });
 
     </script>
 </body>

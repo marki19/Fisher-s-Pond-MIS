@@ -32,7 +32,7 @@ if (!$isAdmin && !$isClockedIn) {
 
 // Fetch all online orders
 $stmt = $pdo->query("
-    SELECT o.OrderID, o.GrandTotal, o.OrderDate, o.Status, o.PaymentPlatform, o.ReferenceNumber, e.FirstName, e.LastName 
+    SELECT o.OrderID, o.GrandTotal, o.OrderDate, o.Status, o.PaymentPlatform, o.ReferenceNumber, o.PaymentVerification, e.FirstName, e.LastName 
     FROM orders o 
     LEFT JOIN employee e ON o.StaffID = e.staffID 
     WHERE o.PaymentMode != 'Cash'
@@ -166,6 +166,38 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
         <main class="page-content">
             <h1 class="page-title">Online Payments Verification</h1>
 
+            <style>
+                .tabs-container {
+                    display: flex;
+                    gap: 10px;
+                    border-bottom: 2px solid var(--border-color);
+                    padding-bottom: 10px;
+                }
+                .tab-link {
+                    background: none;
+                    border: none;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    color: var(--text-muted);
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                }
+                .tab-link:hover {
+                    background: rgba(0,0,0,0.05);
+                }
+                .tab-link.active-tab {
+                    background: var(--primary);
+                    color: white;
+                }
+            </style>
+            <div class="tabs-container" style="margin-bottom: 20px;">
+                <button class="tab-link active-tab" onclick="filterVerification('Pending', this)">Pending</button>
+                <button class="tab-link" onclick="filterVerification('Verified', this)">Verified</button>
+                <button class="tab-link" onclick="filterVerification('Rejected', this)">Rejected</button>
+            </div>
+
             <div class="table-container">
                 <?php if (empty($orders)): ?>
                     <p class="text-muted text-center p-20">No online payments recorded yet.</p>
@@ -178,19 +210,26 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                                 <th>Platform</th>
                                 <th>Reference #</th>
                                 <th>Total</th>
+                                <th>Verification</th>
                                 <th>Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($orders as $o): ?>
-                                <tr class="row-hover" onclick="openReceipt(<?= $o['OrderID'] ?>)">
+                            <?php foreach ($orders as $o): 
+                                $verStatus = $o['PaymentVerification'] ?: 'Pending';
+                                ?>
+                                <tr class="row-hover payment-row" data-verification="<?= htmlspecialchars($verStatus) ?>" onclick="openReceipt(<?= $o['OrderID'] ?>, '<?= htmlspecialchars($verStatus) ?>')">
                                     <td class="text-bold">#<?= str_pad($o['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
                                     <td class="text-muted"><?= date('M j, y h:i A', strtotime($o['OrderDate'])) ?></td>
                                     <td style="font-weight:600; color:var(--primary-color);"><?= htmlspecialchars($o['PaymentPlatform']) ?></td>
                                     <td style="font-family: monospace; font-size: 1.1rem; letter-spacing: 1px;"><?= htmlspecialchars($o['ReferenceNumber']) ?></td>
-                                    <td><?= htmlspecialchars($o['FirstName'] ? ($o['FirstName'] . ' ' . $o['LastName']) : 'Admin') ?></td>
                                     <td class="item-total-bold">₱<?= number_format($o['GrandTotal'], 2) ?></td>
+                                    <td>
+                                        <span class="status-badge status-<?= $verStatus === 'Pending' ? 'Pending' : ($verStatus === 'Verified' ? 'Completed' : 'Voided') ?>">
+                                            <?= htmlspecialchars($verStatus) ?>
+                                        </span>
+                                    </td>
                                     <td><span
                                             class="status-badge status-<?= htmlspecialchars($o['Status']) ?>"><?= htmlspecialchars($o['Status']) ?></span>
                                     </td>
@@ -214,6 +253,13 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                 <!-- Dynamically filled with exact print HTML -->
             </div>
 
+            <div id="verifyActions" class="flex-row-gap mt-20" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                <?php if ($isAdmin || $isManager || $isCashier): ?>
+                    <button class="btn btn-success flex-1" onclick="updateVerificationStatus('Verified')">Mark Verified</button>
+                    <button class="btn btn-danger flex-1" onclick="updateVerificationStatus('Rejected')">Reject Payment</button>
+                <?php endif; ?>
+            </div>
+
             <div class="flex-row-gap mt-20">
                 <button class="btn btn-clock-in flex-1" onclick="printHistoryReceipt()">Print Receipt</button>
                 <?php if ($isAdmin || $isManager): ?>
@@ -234,7 +280,7 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
             if (receiptModal) receiptModal.classList.add('hidden');
         });
 
-        async function openReceipt(orderId) {
+        async function openReceipt(orderId, verStatus = 'Pending') {
             currentOpenOrderId = orderId;
             try {
                 const res = await fetch(`get_order_items.php?order_id=${orderId}`);
@@ -296,6 +342,11 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                     document.getElementById('receiptContent').innerHTML = custHtml;
                     document.getElementById('r_orderId').innerText = o.OrderID;
 
+                    const verifyActions = document.getElementById('verifyActions');
+                    if (verifyActions) {
+                        verifyActions.style.display = (verStatus === 'Pending' && o.Status !== 'Voided') ? 'flex' : 'none';
+                    }
+
                     // Hide Void button if already voided
                     const btnVoid = document.getElementById('btnVoid');
                     if (btnVoid) {
@@ -334,6 +385,53 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                 alert('Connection error voiding order.');
             }
         }
+
+        async function updateVerificationStatus(status) {
+            if (!currentOpenOrderId) return;
+            if (!confirm(`Are you sure you want to mark this payment as ${status}?`)) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('order_id', currentOpenOrderId);
+                formData.append('status', status);
+
+                const res = await fetch('update_verification.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    alert('Verification updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert(data.msg || 'Failed to update verification.');
+                }
+            } catch (e) {
+                alert('Connection error updating verification.');
+            }
+        }
+
+        function filterVerification(status, btn) {
+            // Update active tab styling
+            document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active-tab'));
+            btn.classList.add('active-tab');
+
+            // Filter rows
+            document.querySelectorAll('.payment-row').forEach(row => {
+                if (row.getAttribute('data-verification') === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Apply initial filter
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstTab = document.querySelector('.tab-link');
+            if (firstTab) filterVerification('Pending', firstTab);
+        });
 
         function printHistoryReceipt() {
             if (!currentOrderData) return;

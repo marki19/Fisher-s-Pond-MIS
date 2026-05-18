@@ -18,9 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'LastName' => trim($_POST['LastName']),
             'BirthDate' => $_POST['BirthDate'],
             'Email' => trim($_POST['Email']),
-            'ContactNumber' => trim($_POST['ContactNumber']),
+            'ContactNumber' => '+63' . preg_replace('/\D/', '', trim($_POST['ContactNumber'])),
             'PositionID' => $_POST['PositionID']
         ];
+        
+        if (!preg_match('/^(09|\+639)\d{9}$/', $data['ContactNumber'])) {
+            $_SESSION['admin_msg'] = 'Invalid cellphone number. Must be 11 digits starting with 09 or +639.';
+            $_SESSION['admin_msg_type'] = 'error';
+            header('Location: index.php?tab=active');
+            exit;
+        }
         
         if (!empty($data['staffID'])) {
             updateEmployee($pdo, $data);
@@ -31,6 +38,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $_SESSION['admin_msg_type'] = 'success';
         header('Location: index.php?tab=active');
+        exit;
+    } elseif ($action === 'edit_shift') {
+        $shiftId  = (int)($_POST['ShiftID'] ?? 0);
+        $clockOut = trim($_POST['ClockOut'] ?? '');
+
+        if ($shiftId > 0) {
+            // Fetch the existing shift to get ShiftDate and ClockIn
+            $stmtShift = $pdo->prepare("SELECT ShiftDate, ClockIn FROM employeeshift WHERE ShiftID = ?");
+            $stmtShift->execute([$shiftId]);
+            $shift = $stmtShift->fetch(PDO::FETCH_ASSOC);
+
+            if (!$shift) {
+                $_SESSION['admin_msg'] = 'Shift not found.';
+                $_SESSION['admin_msg_type'] = 'error';
+                header('Location: index.php?tab=attendance');
+                exit;
+            }
+
+            if ($clockOut === '') {
+                // Clear the ClockOut (mark as active/open shift again)
+                $stmt = $pdo->prepare("UPDATE employeeshift SET ClockOut = NULL WHERE ShiftID = ?");
+                $stmt->execute([$shiftId]);
+                $_SESSION['admin_msg'] = 'Clock-out cleared. Shift is now open.';
+                $_SESSION['admin_msg_type'] = 'success';
+            } else {
+                $shiftDate = $shift['ShiftDate'];   // e.g. "2025-05-17"
+                $clockIn   = $shift['ClockIn'];     // e.g. "2025-05-17 20:30:00"
+
+                // Build ClockOut datetime using the same ShiftDate
+                $clockOutVal = $shiftDate . ' ' . $clockOut . ':00';
+
+                // Strictly reject if ClockOut is not AFTER ClockIn
+                if (strtotime($clockOutVal) <= strtotime($clockIn)) {
+                    $clockInFormatted = date('h:i A', strtotime($clockIn));
+                    $_SESSION['admin_msg'] = "Invalid Clock-Out time. Must be after the employee's Clock-In time of {$clockInFormatted}.";
+                    $_SESSION['admin_msg_type'] = 'error';
+                    header('Location: index.php?tab=attendance');
+                    exit;
+                }
+
+                $stmt = $pdo->prepare("UPDATE employeeshift SET ClockOut = ? WHERE ShiftID = ?");
+                $stmt->execute([$clockOutVal, $shiftId]);
+                $_SESSION['admin_msg'] = 'Shift updated successfully.';
+                $_SESSION['admin_msg_type'] = 'success';
+            }
+        } else {
+            $_SESSION['admin_msg'] = 'Invalid Shift ID.';
+            $_SESSION['admin_msg_type'] = 'error';
+        }
+        header('Location: index.php?tab=attendance');
         exit;
     } elseif ($action === 'deactivate') {
         $deleteStaffID = (int)($_POST['delete_staffID'] ?? 0);

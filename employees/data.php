@@ -104,6 +104,11 @@ function updateMyAccount(PDO $pdo, string $staffID, array $d): array {
         return ['ok' => false, 'msg' => 'Incorrect current password. All updates rejected.'];
     }
 
+    $contact = trim($d['ContactNumber'] ?? '');
+    if (!preg_match('/^(09|\+639)\d{9}$/', $contact)) {
+        return ['ok' => false, 'msg' => 'Invalid cellphone number. Must be 11 digits starting with 09 or +639.'];
+    }
+
     $username = trim($d['Username']) === '' ? null : trim($d['Username']);
     $newPassHash = $emp['PasswordHash'];
 
