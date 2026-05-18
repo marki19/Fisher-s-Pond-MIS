@@ -16,6 +16,11 @@ if (!$isAdmin && !$isManager) {
     exit;
 }
 
+if ($isSuperAdmin && !isset($_GET['embedded'])) {
+    header("Location: ../admin/index.php?tab=admin&view=online_payments");
+    exit;
+}
+
 $isClockedIn = false;
 if (isset($_SESSION['active_staffID'])) {
     $checkShift = $pdo->prepare("SELECT ShiftID FROM employeeshift WHERE StaffID = ? AND ClockOut IS NULL");

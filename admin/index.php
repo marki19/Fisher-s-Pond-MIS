@@ -14,8 +14,6 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 $isSuperAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true && ($_SESSION['admin_role'] ?? '') === 'Admin';
 
-
-
 $tab = $_GET['tab'] ?? 'active';
 
 if ($tab === 'active') {
@@ -419,19 +417,19 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             $view = $_GET['view'] ?? 'pos';
             $iframeSrc = '';
             if ($view === 'pos')
-                $iframeSrc = '../pos/index.php';
+                $iframeSrc = '../pos/index.php?embedded=1';
             elseif ($view === 'orders')
-                $iframeSrc = '../pos/orders.php';
+                $iframeSrc = '../pos/orders.php?embedded=1';
             elseif ($view === 'dashboard')
-                $iframeSrc = '../pos/dashboard.php';
+                $iframeSrc = '../pos/dashboard.php?embedded=1';
             elseif ($view === 'menu')
-                $iframeSrc = '../pos/menu_manage.php';
+                $iframeSrc = '../pos/menu_manage.php?embedded=1';
             elseif ($view === 'payroll')
-                $iframeSrc = '../pos/payroll.php';
+                $iframeSrc = '../pos/payroll.php?embedded=1';
             elseif ($view === 'discounts')
-                $iframeSrc = '../pos/discounts.php';
+                $iframeSrc = '../pos/discounts.php?embedded=1';
             elseif ($view === 'online_payments')
-                $iframeSrc = '../pos/online_payments.php';
+                $iframeSrc = '../pos/online_payments.php?embedded=1';
             ?>
             <div style="height: 100vh; width: 100%; padding: 0;">
                 <iframe src="<?= $iframeSrc ?>" width="100%" height="100%" frameborder="0" style="display: block;"></iframe>
@@ -686,6 +684,16 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                     <label>Payroll Tax Deduction (%)</label>
                     <input type="number" step="0.01" min="0" max="100" name="payroll_tax_rate"
                         value="<?= htmlspecialchars(($storeSettings['payroll_tax_rate'] ?? 0.05) * 100) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Payroll Hours Per Day</label>
+                    <input type="number" step="1" min="1" max="24" name="payroll_hours_per_day"
+                        value="<?= htmlspecialchars($storeSettings['payroll_hours_per_day'] ?? 8) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Payroll Max Shift Hours</label>
+                    <input type="number" step="1" min="1" max="24" name="payroll_max_shift_hours"
+                        value="<?= htmlspecialchars($storeSettings['payroll_max_shift_hours'] ?? 12) ?>" required>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeTaxModal()">Cancel</button>

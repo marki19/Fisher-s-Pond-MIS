@@ -19,14 +19,17 @@ if (isset($_SESSION['active_staffID'])) {
 }
 
 // Only SuperAdmins and Managers can access Payroll
-if (!$isSuperAdmin && !$isManager) {
+if (!$isAdmin && !$isManager) {
     if (isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3) {
-        header("Location: index.php");
-    } elseif ($isAdmin) {
-        header("Location: ../admin/index.php");
+        header("Location: index.php"); // Cashiers go back to POS
     } else {
         header("Location: ../employees/index.php");
     }
+    exit;
+}
+
+if ($isSuperAdmin && !isset($_GET['embedded'])) {
+    header("Location: ../admin/index.php?tab=admin&view=payroll");
     exit;
 }
 
@@ -47,6 +50,8 @@ while ($row = $settingsStmt->fetch(PDO::FETCH_ASSOC)) {
 }
 $storeName = $storeSettings['store_name'] ?? "Fisher's Pond Seafood and Grill";
 $payrollTaxRate = (float)($storeSettings['payroll_tax_rate'] ?? 0.05);
+$payrollHoursPerDay = (float)($storeSettings['payroll_hours_per_day'] ?? 8);
+$payrollMaxShiftHours = (float)($storeSettings['payroll_max_shift_hours'] ?? 12);
 
 $msg = '';
 $msgType = '';
@@ -69,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if ($record) {
         $rate       = floatval($record['BaseRate']);
-        $hourlyRate = $rate / 8;
+        $hourlyRate = $rate / $payrollHoursPerDay;
         $gross      = $newHours * $hourlyRate;
         $tax        = $gross * $payrollTaxRate;
         $net        = $gross - $tax;
@@ -96,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt = $pdo->prepare("
                 SELECT 
                     e.staffID, p.BaseRate,
-                    SUM(LEAST(TIMESTAMPDIFF(SECOND, s.ClockIn, s.ClockOut), 12 * 3600)) / 3600 as ExactHoursWorked
+                    SUM(LEAST(TIMESTAMPDIFF(SECOND, s.ClockIn, s.ClockOut), ? * 3600)) / 3600 as ExactHoursWorked
                 FROM employeeshift s
                 JOIN employee e ON s.StaffID = e.staffID
                 JOIN position p ON e.PositionID = p.PositionID
@@ -105,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                   AND DATE(s.ShiftDate) >= ? AND DATE(s.ShiftDate) <= ?
                 GROUP BY e.staffID, p.BaseRate
             ");
-            $stmt->execute([$startDate, $endDate]);
+            $stmt->execute([$payrollMaxShiftHours, $startDate, $endDate]);
             $unpaidShifts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (empty($unpaidShifts)) {
@@ -125,8 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 foreach ($unpaidShifts as $row) {
                     $hours = floatval($row['ExactHoursWorked']);
                     $rate = floatval($row['BaseRate']); // Rate is PER DAY
-                    // Assume 1 full day is 8 hours
-                    $hourlyRate = $rate / 8;
+                    // Daily rate is divided by configured hours per day
+                    $hourlyRate = $rate / $payrollHoursPerDay;
                     
                     $gross = $hours * $hourlyRate;
                     $tax = $gross * $payrollTaxRate;

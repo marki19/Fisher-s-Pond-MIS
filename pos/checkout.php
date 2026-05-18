@@ -5,7 +5,7 @@ require __DIR__ . '/../config.php';
 header('Content-Type: application/json');
 
 try {
-    $pdo->exec("ALTER TABLE menu_item ADD COLUMN StockQty DECIMAL(10,2) NOT NULL DEFAULT 0");
+    // Schema migration moved to db_update.php
 } catch (PDOException $e) {
     // Ignore duplicate column errors.
 }
@@ -31,12 +31,7 @@ if (!$input || empty($input['items'])) {
     exit;
 }
 
-    // Auto-migrate schema if SpecialRequest column is missing
-    try {
-        $pdo->exec("ALTER TABLE orders ADD COLUMN SpecialRequest VARCHAR(255) DEFAULT NULL");
-    } catch (PDOException $e) {
-        // Ignore duplicate column errors
-    }
+    // Auto-migrate schema moved to db_update.php
 
 try {
     $pdo->beginTransaction();

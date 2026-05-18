@@ -31,6 +31,11 @@ if (!$isSuperAdmin && !$isManager) {
     exit;
 }
 
+if ($isSuperAdmin && !isset($_GET['embedded'])) {
+    header("Location: ../admin/index.php?tab=admin&view=menu");
+    exit;
+}
+
 if (!$isAdmin && !$isClockedIn) {
     $_SESSION['kiosk_msg'] = 'Access Denied: You must clock in first before accessing the POS Terminal.';
     $_SESSION['kiosk_msg_type'] = 'error';

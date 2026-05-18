@@ -29,6 +29,13 @@ if (!$isSuperAdmin && !$isManager && !$isCashier) {
     exit;
 }
 
+// Add this after your role checks in pos/index.php
+if ($isSuperAdmin && !isset($_GET['embedded'])) {
+    // If an Admin accessed this directly without the iframe parameter, route them to the proper view
+    header("Location: ../admin/index.php?tab=admin&view=pos");
+    exit;
+}
+
 if (!$isAdmin && !$isClockedIn) {
     $_SESSION['kiosk_msg'] = 'Access Denied: You must clock in first before accessing the POS Terminal.';
     $_SESSION['kiosk_msg_type'] = 'error';

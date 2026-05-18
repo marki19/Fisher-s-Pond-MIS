@@ -3,10 +3,7 @@ require_once __DIR__ . '/../config.php';
 
 // === CATEGORIES ===
 function ensureMenuStockColumns(PDO $pdo): void {
-    $checkQty = $pdo->query("SHOW COLUMNS FROM menu_item LIKE 'StockQty'");
-    if (!$checkQty->fetch(PDO::FETCH_ASSOC)) {
-        $pdo->exec("ALTER TABLE menu_item ADD COLUMN StockQty DECIMAL(10,2) NOT NULL DEFAULT 0");
-    }
+    // Moved to db_update.php
 }
 
 function isInventoryTrackedCategory(PDO $pdo, int $categoryID): bool {
@@ -17,14 +14,7 @@ function isInventoryTrackedCategory(PDO $pdo, int $categoryID): bool {
 }
 
 function ensureCategoryColumns(PDO $pdo): void {
-    $check = $pdo->query("SHOW COLUMNS FROM category LIKE 'IsActive'");
-    if (!$check->fetch(PDO::FETCH_ASSOC)) {
-        $pdo->exec("ALTER TABLE category ADD COLUMN IsActive TINYINT(1) NOT NULL DEFAULT 1");
-    }
-    $check2 = $pdo->query("SHOW COLUMNS FROM category LIKE 'IsInventoryTracked'");
-    if (!$check2->fetch(PDO::FETCH_ASSOC)) {
-        $pdo->exec("ALTER TABLE category ADD COLUMN IsInventoryTracked TINYINT(1) NOT NULL DEFAULT 0");
-    }
+    // Moved to db_update.php
 }
 
 function getCategories(PDO $pdo): array {

@@ -48,9 +48,10 @@ while ($row = $settingsStmt->fetch(PDO::FETCH_ASSOC)) {
     $storeSettings[$row['key_name']] = $row['key_value'];
 }
 $payrollTaxRate = (float)($storeSettings['payroll_tax_rate'] ?? 0.05);
+$payrollHoursPerDay = (float)($storeSettings['payroll_hours_per_day'] ?? 8);
 
 $rate       = floatval($record['BaseRate']); // daily rate stored on record
-$hourlyRate = $rate / 8;
+$hourlyRate = $rate / $payrollHoursPerDay;
 $gross      = $newHours * $hourlyRate;
 $tax        = $gross * $payrollTaxRate;
 $net        = $gross - $tax;

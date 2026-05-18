@@ -204,12 +204,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $orderTaxRate = $orderTaxPct / 100;
             $payrollTaxRate = $payrollTaxPct / 100;
+            $payrollHoursPerDay = (float)($_POST['payroll_hours_per_day'] ?? 8);
+            $payrollMaxShiftHours = (float)($_POST['payroll_max_shift_hours'] ?? 12);
             
             $stmt = $pdo->prepare("INSERT INTO store_settings (key_name, key_value) VALUES ('order_tax_rate', ?) ON DUPLICATE KEY UPDATE key_value = ?");
             $stmt->execute([$orderTaxRate, $orderTaxRate]);
             
             $stmt = $pdo->prepare("INSERT INTO store_settings (key_name, key_value) VALUES ('payroll_tax_rate', ?) ON DUPLICATE KEY UPDATE key_value = ?");
             $stmt->execute([$payrollTaxRate, $payrollTaxRate]);
+
+            $stmt = $pdo->prepare("INSERT INTO store_settings (key_name, key_value) VALUES ('payroll_hours_per_day', ?) ON DUPLICATE KEY UPDATE key_value = ?");
+            $stmt->execute([$payrollHoursPerDay, $payrollHoursPerDay]);
+
+            $stmt = $pdo->prepare("INSERT INTO store_settings (key_name, key_value) VALUES ('payroll_max_shift_hours', ?) ON DUPLICATE KEY UPDATE key_value = ?");
+            $stmt->execute([$payrollMaxShiftHours, $payrollMaxShiftHours]);
             
             $_SESSION['admin_msg'] = 'Tax settings updated successfully.';
             $_SESSION['admin_msg_type'] = 'success';
