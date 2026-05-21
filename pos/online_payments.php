@@ -250,22 +250,25 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
 
     <!-- Receipt Modal -->
     <div id="receiptModal" class="modal-overlay hidden">
-        <div class="modal modal-receipt">
+        <div class="modal modal-receipt" style="display:flex; flex-direction:column; max-height:90vh; width:100%; max-width:480px; padding:24px;">
             <button class="modal-close" id="btnCloseModal">&times;</button>
-            <h3 class="mt-0">Order Receipt #<span id="r_orderId"></span></h3>
+            <h3 class="mt-0" style="margin-bottom:12px;">Order Receipt #<span id="r_orderId"></span></h3>
 
-            <div class="receipt-body" id="receiptContent" style="background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <!-- Scrollable receipt area -->
+            <div class="receipt-body" id="receiptContent"
+                style="flex:1; overflow-y:auto; background:#fff; padding:12px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:16px; font-size:14px;">
                 <!-- Dynamically filled with exact print HTML -->
             </div>
 
-            <div id="verifyActions" class="flex-row-gap mt-20" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color);">
+            <!-- Pinned buttons at bottom -->
+            <div id="verifyActions" class="flex-row-gap" style="display: none; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); margin-bottom:10px;">
                 <?php if ($isAdmin || $isManager || $isCashier): ?>
                     <button class="btn btn-success flex-1" onclick="updateVerificationStatus('Verified')">Mark Verified</button>
                     <button class="btn btn-danger flex-1" onclick="updateVerificationStatus('Rejected')">Reject Payment</button>
                 <?php endif; ?>
             </div>
 
-            <div class="flex-row-gap mt-20">
+            <div class="flex-row-gap">
                 <button class="btn btn-clock-in flex-1" onclick="printHistoryReceipt()">Print Receipt</button>
                 <?php if ($isAdmin || $isManager): ?>
                     <button class="btn btn-clock-out flex-1" id="btnVoid" onclick="voidOrder()">Void Transaction</button>

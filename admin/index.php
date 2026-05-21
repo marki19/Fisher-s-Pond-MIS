@@ -50,6 +50,12 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
     <link rel="stylesheet" href="../assets/flatpickr.css">
     <script src="../assets/flatpickr.js"></script>
+    <style>
+        /* Force flatpickr calendar above modal backdrop (z-index: 1000) */
+        .flatpickr-calendar {
+            z-index: 9999 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -461,7 +467,12 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
 
                         <div class="form-group">
                             <label>Birth Date</label>
-                            <input type="date" name="BirthDate" id="empBirthDate" required>
+                            <div style="display:flex; align-items:center; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; background:#fff;" id="birthdateWrapper">
+                                <span style="padding: 10px 10px; font-size: 1.05rem; cursor:pointer; background:#f8fafc; border-right:1.5px solid var(--border-color);" onclick="document.getElementById('empBirthDate')._flatpickr && document.getElementById('empBirthDate')._flatpickr.open();">&#128197;</span>
+                                <input type="text" name="BirthDate" id="empBirthDate" required
+                                    placeholder="Select birth date..."
+                                    style="border:none; outline:none; padding: 10px 12px; font-size: 0.9rem; font-family:inherit; width: 100%; background:#fff; color:var(--text-dark); cursor:pointer;" autocomplete="off">
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -737,7 +748,16 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             document.getElementById('empUsername').value = un;
             document.getElementById('empFirstName').value = fn;
             document.getElementById('empLastName').value = ln;
-            document.getElementById('empBirthDate').value = bd || '2000-01-01';
+
+            // Set flatpickr birthdate value
+            var bdEl = document.getElementById('empBirthDate');
+            var dateToSet = bd || '2000-01-01';
+            if (bdEl && bdEl._flatpickr) {
+                bdEl._flatpickr.setDate(dateToSet, true);
+            } else {
+                bdEl.value = dateToSet;
+            }
+
             document.getElementById('empEmail').value = em;
             // Strip +63 / 63 prefix so only the 10-digit part fills the field
             var cnClean = cn.replace(/^\+63/, '').replace(/^63/, '').replace(/^0/, '');
@@ -880,15 +900,6 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             table.parentNode.insertBefore(controls, table.nextSibling);
             render();
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            paginateTable('employeesTable', 10);
-            
-            // Only paginate attendance if we are not actively filtering
-            // Actually, filtering breaks pagination if we don't re-render, so let's just paginate initially.
-            // Better: when filters are applied, remove pagination or re-paginate visible rows.
-            // For now, let's keep it simple and let the filter logic handle showing/hiding on the current page,
-            // or just disable pagination when filtering. Let's just run it initially.
         function filterEmployeeTable() {
             const input = document.getElementById('employeeSearchInput');
             if (!input) return;
@@ -925,16 +936,29 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             paginateTable('attendanceTable', 10);
             paginateTable('adminUsersTable', 10);
 
-            // Restrict BirthDate to 18 years ago or older
+            // Init flatpickr for BirthDate
             const bdateInput = document.getElementById('empBirthDate');
             if (bdateInput) {
                 const today = new Date();
-                const year18Ago = today.getFullYear() - 18;
-                let month = today.getMonth() + 1;
-                let day = today.getDate();
-                if (month < 10) month = '0' + month;
-                if (day < 10) day = '0' + day;
-                bdateInput.max = `${year18Ago}-${month}-${day}`;
+                const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+                const empModal = document.getElementById('employeeModal');
+
+                flatpickr(bdateInput, {
+                    dateFormat: 'Y-m-d',
+                    defaultDate: '2000-01-01',
+                    maxDate: maxDate,
+                    disableMobile: true,
+                    allowInput: false,
+                    appendTo: document.body,
+                    onOpen: function() {
+                        var w = document.getElementById('birthdateWrapper');
+                        if (w) { w.style.borderColor = 'var(--primary)'; w.style.boxShadow = '0 0 0 3px rgba(14,116,144,0.12)'; }
+                    },
+                    onClose: function() {
+                        var w = document.getElementById('birthdateWrapper');
+                        if (w) { w.style.borderColor = 'var(--border-color)'; w.style.boxShadow = 'none'; }
+                    }
+                });
             }
         });
 

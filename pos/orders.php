@@ -446,8 +446,8 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                     let show = true;
                     
                     if (status !== 'all') {
-                        const rowStatus = row.cells[5].innerText.trim();
-                        if (rowStatus !== status) {
+                        const rowStatus = row.cells[5].innerText.trim().toLowerCase();
+                        if (rowStatus !== status.toLowerCase()) {
                             show = false;
                         }
                     }

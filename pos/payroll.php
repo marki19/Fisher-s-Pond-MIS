@@ -234,9 +234,14 @@ if ($viewPeriod) {
                     </div>
                     <form method="POST" class="flex-row-align-end">
                         <input type="hidden" name="action" value="generate">
-                        <div class="form-group-inline" style="flex: 1; min-width: 250px;">
+                        <div class="form-group-inline" style="flex: 0 0 auto;">
                             <label>Select Date Range</label>
-                            <input type="text" id="payrollDateRange" name="DateRange" required class="form-input" placeholder="e.g. 2026-05-01 to 2026-05-15">
+                            <div style="display:flex; align-items:center; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; background:#fff;" id="payrollRangeWrapper">
+                                <span style="padding: 10px 10px; font-size: 1.05rem; cursor:pointer; background:#f8fafc; border-right:1.5px solid var(--border-color);" onclick="document.getElementById('payrollDateRange')._flatpickr && document.getElementById('payrollDateRange')._flatpickr.open();">&#128197;</span>
+                                <input type="text" id="payrollDateRange" name="DateRange" required
+                                    placeholder="Start date → End date"
+                                    style="border:none; outline:none; padding: 10px 12px; font-size: 0.9rem; font-family:inherit; width: 240px; background:#fff; color:var(--text-dark); cursor:pointer;">
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary" style="background:var(--primary); color:white; padding:12px 24px; border-radius:var(--radius-sm); border:none; font-weight:600;">Generate Payroll</button>
                     </form>
@@ -364,6 +369,14 @@ if ($viewPeriod) {
                 flatpickr("#payrollDateRange", {
                     mode: "range",
                     dateFormat: "Y-m-d",
+                    onOpen: function() {
+                        var w = document.getElementById('payrollRangeWrapper');
+                        if (w) { w.style.borderColor = 'var(--primary)'; w.style.boxShadow = '0 0 0 3px rgba(14,116,144,0.12)'; }
+                    },
+                    onClose: function() {
+                        var w = document.getElementById('payrollRangeWrapper');
+                        if (w) { w.style.borderColor = 'var(--border-color)'; w.style.boxShadow = 'none'; }
+                    }
                 });
             }
         });
