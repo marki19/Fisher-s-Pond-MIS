@@ -887,6 +887,21 @@ table tr.row-hover:hover td {
     color: #991b1b;
 }
 
+.status-Pending {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.status-Preparing {
+    background: var(--warning-light);
+    color: #b45309;
+}
+
+.status-Ready {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
 .badge {
     padding: 4px 10px;
     border-radius: var(--radius-full);

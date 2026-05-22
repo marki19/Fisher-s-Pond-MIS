@@ -101,6 +101,11 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                 <a href="?tab=admin&view=online_payments"
                     class="<?= ($tab === 'admin' && ($_GET['view'] ?? '') === 'online_payments') ? 'active' : '' ?>">Online
                     Payments</a>
+
+                <div class="sidebar-divider"></div>
+                <div class="sidebar-heading">Kitchen Operations</div>
+                <a href="?tab=admin&view=kitchen"
+                    class="<?= ($tab === 'admin' && ($_GET['view'] ?? '') === 'kitchen') ? 'active' : '' ?>">Kitchen Queue</a>
                 <div class="sidebar-divider"></div>
             <?php endif; ?>
             <a href="../admin/adminLogOut.php" class="logout danger-text">Log Out</a>
@@ -436,6 +441,8 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                 $iframeSrc = '../pos/discounts.php?embedded=1';
             elseif ($view === 'online_payments')
                 $iframeSrc = '../pos/online_payments.php?embedded=1';
+            elseif ($view === 'kitchen')
+                $iframeSrc = '../pos/kitchen.php?embedded=1';
             ?>
             <div style="height: 100vh; width: 100%; padding: 0;">
                 <iframe src="<?= $iframeSrc ?>" width="100%" height="100%" frameborder="0" style="display: block;"></iframe>
@@ -515,6 +522,21 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
                             <label>Username (Optional)</label>
                             <input type="text" name="Username" id="empUsername" autocapitalize="off" autocorrect="off"
                                 spellcheck="false">
+                        </div>
+
+                        <div id="passwordOverrideSection" style="display: none; border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                            <h4 style="font-size: 0.9rem; color: var(--primary-dark); margin-bottom: 12px; font-weight: 600;">Reset Password / Recovery</h4>
+                            <div class="form-group">
+                                <label>Set New Password (Direct Override)</label>
+                                <div class="password-field">
+                                    <input type="password" name="NewPassword" id="empNewPassword" placeholder="Min 8 characters" autocapitalize="off" autocorrect="off" spellcheck="false">
+                                    <button type="button" class="password-toggle" onclick="togglePassword('empNewPassword', this)" aria-label="Toggle password visibility" title="Show or hide password">&#128065;</button>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+                                <input type="checkbox" name="ClearPassword" id="empClearPassword" value="1" style="width: auto; margin: 0; cursor: pointer;">
+                                <label for="empClearPassword" style="margin: 0; font-size: 0.85rem; cursor: pointer; color: var(--text-dark);">Require activation on next login (forces wizard)</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -763,6 +785,16 @@ unset($_SESSION['admin_msg'], $_SESSION['admin_msg_type']);
             var cnClean = cn.replace(/^\+63/, '').replace(/^63/, '').replace(/^0/, '');
             document.getElementById('empContactNumber').value = cnClean;
             document.getElementById('empPositionID').value = pid;
+
+            // Toggle password override section based on editing state
+            const passSection = document.getElementById('passwordOverrideSection');
+            if (id) {
+                passSection.style.display = 'block';
+            } else {
+                passSection.style.display = 'none';
+            }
+            document.getElementById('empNewPassword').value = '';
+            document.getElementById('empClearPassword').checked = false;
 
             document.getElementById('modalTitle').innerText = id ? 'Edit Employee' : 'Add Employee';
             document.getElementById('submitBtn').innerText = id ? 'Update Changes' : 'Save Employee';

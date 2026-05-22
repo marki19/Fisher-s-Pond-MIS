@@ -140,11 +140,15 @@ if ($loggedIn && $view === 'default') {
                     <button onclick="window.location.href='?v=my_details'" class="btn clock-nav-btn"><span
                             class="clock-nav-icon">&#9998;</span><span class="clock-nav-text"><strong>Update
                                 Details</strong><small>Profile &amp; password</small></span></button>
-                    <?php if ($_SESSION['position_id'] == 1 || $_SESSION['position_id'] == 3): ?>
+                    <?php 
+                    $showPOS = ($_SESSION['position_id'] == 1 || $_SESSION['position_id'] == 3);
+                    ?>
+                    <?php if ($showPOS): ?>
                         <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">
                         <div class="clock-section-label">Operations</div>
+                        
                         <button onclick="window.location.href='../pos/index.php'" class="btn clock-nav-btn"
-                            style="border-color: var(--primary); background: var(--primary-lighter);"><span
+                            style="border-color: var(--primary); background: var(--primary-lighter); margin-bottom: 10px;"><span
                                 class="clock-nav-icon">&#128187;</span><span class="clock-nav-text"><strong
                                     style="color: var(--primary-dark);">Launch POS Terminal</strong><small>Open cash
                                     register</small></span></button>
@@ -202,11 +206,17 @@ if ($loggedIn && $view === 'default') {
                                 required>
                         </div>
                         <div class="form-group">
-                            <label>Contact Number</label><input type="tel" name="ContactNumber"
-                                value="<?= htmlspecialchars($emp['ContactNumber']) ?>"
-                                pattern="^(09|\+639)\d{9}$"
-                                title="Enter an 11-digit number starting with 09 or +639 (e.g. 09123456789 or +639123456789)"
-                                class="w-full p-12 border-gray rounded-8" required>
+                            <label>Contact Number</label>
+                            <div style="display: flex; align-items: stretch; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: white;">
+                                <span style="padding: 12px 14px; background: #f8fafc; color: #475569; border-right: 1px solid #cbd5e1; font-weight: 600; display: flex; align-items: center;">+63</span>
+                                <input type="tel" id="contactNumberDisplay"
+                                    value="<?= htmlspecialchars(preg_replace('/^(0|\+63)/', '', $emp['ContactNumber'])) ?>"
+                                    maxlength="10"
+                                    oninput="let v = this.value.replace(/[^0-9]/g, ''); if(v.startsWith('0')) v = v.substring(1); this.value = v; document.getElementById('contactNumberActual').value = '+63' + v;"
+                                    placeholder="9123456789"
+                                    style="border: none; outline: none; border-radius: 0; flex: 1; padding: 12px; font-size: 1rem; width: 100%;" required>
+                                <input type="hidden" name="ContactNumber" id="contactNumberActual" value="<?= htmlspecialchars($emp['ContactNumber']) ?>">
+                            </div>
                         </div>
                     </div>
 

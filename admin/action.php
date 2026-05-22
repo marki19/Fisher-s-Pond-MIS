@@ -29,14 +29,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
+        $newPassword = $_POST['NewPassword'] ?? '';
+        $clearPassword = isset($_POST['ClearPassword']) && $_POST['ClearPassword'] == '1';
+
         if (!empty($data['staffID'])) {
-            updateEmployee($pdo, $data);
-            $_SESSION['admin_msg'] = 'Employee updated successfully.';
+            if ($clearPassword) {
+                $res = updateEmployee($pdo, $data, '', true);
+                $successMsg = 'Employee updated and password cleared (requires activation on next login).';
+            } elseif (!empty($newPassword)) {
+                if (strlen($newPassword) < 8) {
+                    $_SESSION['admin_msg'] = 'New password must be at least 8 characters long.';
+                    $_SESSION['admin_msg_type'] = 'error';
+                    header('Location: index.php?tab=active');
+                    exit;
+                }
+                $res = updateEmployee($pdo, $data, $newPassword, false);
+                $successMsg = 'Employee updated and password changed successfully.';
+            } else {
+                $res = updateEmployee($pdo, $data);
+                $successMsg = 'Employee updated successfully.';
+            }
         } else {
-            addEmployee($pdo, $data);
-            $_SESSION['admin_msg'] = '✅ New employee added!';
+            $res = addEmployee($pdo, $data);
+            $successMsg = '✅ New employee added!';
         }
-        $_SESSION['admin_msg_type'] = 'success';
+        
+        if (isset($res) && is_array($res) && !$res['ok']) {
+            $_SESSION['admin_msg'] = $res['msg'];
+            $_SESSION['admin_msg_type'] = 'error';
+        } else {
+            $_SESSION['admin_msg'] = $successMsg;
+            $_SESSION['admin_msg_type'] = 'success';
+        }
+        
         header('Location: index.php?tab=active');
         exit;
     } elseif ($action === 'edit_shift') {

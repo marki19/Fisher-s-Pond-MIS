@@ -30,36 +30,56 @@ function getPositions(PDO $pdo): array {
     return $pdo->query("SELECT PositionID, PositionName, BaseRate FROM position ORDER BY PositionID ASC")->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function addEmployee(PDO $pdo, array $d): void {
+function addEmployee(PDO $pdo, array $d): array {
     $username = trim($d['Username'] ?? '');
     if ($username === '') {
         $cleanName = preg_replace('/[^a-zA-Z]/', '', $d['FirstName']);
         $username = strtolower($cleanName) . rand(100, 999);
     }
+    
+    // Check if username already exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM employee WHERE Username = ?");
+    $stmt->execute([$username]);
+    if ($stmt->fetchColumn() > 0) {
+        return ['ok' => false, 'msg' => "Username '$username' is already taken."];
+    }
+
     $sql = "INSERT INTO employee (FirstName, LastName, BirthDate, Email, ContactNumber, PositionID, Username)
             VALUES (:fn, :ln, :bd, :em, :cn, :pid, :un)";
-    $pdo->prepare($sql)->execute([
-        ':fn'  => ucwords(trim($d['FirstName'])),
-        ':ln'  => ucwords(trim($d['LastName'])),
-        ':bd'  => $d['BirthDate'],
-        ':em'  => $d['Email'],
-        ':cn'  => $d['ContactNumber'],
-        ':pid' => $d['PositionID'],
-        ':un'  => $username,
-    ]);
+    try {
+        $pdo->prepare($sql)->execute([
+            ':fn'  => ucwords(trim($d['FirstName'])),
+            ':ln'  => ucwords(trim($d['LastName'])),
+            ':bd'  => $d['BirthDate'],
+            ':em'  => $d['Email'],
+            ':cn'  => $d['ContactNumber'],
+            ':pid' => $d['PositionID'],
+            ':un'  => $username,
+        ]);
+        return ['ok' => true];
+    } catch (PDOException $e) {
+        if ($e->getCode() == 23000) {
+            return ['ok' => false, 'msg' => "Username '$username' is already taken."];
+        }
+        throw $e;
+    }
 }
 
-function updateEmployee(PDO $pdo, array $d): void {
+function updateEmployee(PDO $pdo, array $d, string $newPassword = '', bool $clearPassword = false): array {
     $username = trim($d['Username'] ?? '');
     if ($username === '') {
         $cleanName = preg_replace('/[^a-zA-Z]/', '', $d['FirstName']);
         $username = strtolower($cleanName) . rand(100, 999);
     }
-    $sql = "UPDATE employee
-            SET FirstName=:fn, LastName=:ln, BirthDate=:bd,
-                Email=:em, ContactNumber=:cn, PositionID=:pid, Username=:un
-            WHERE staffID=:id";
-    $pdo->prepare($sql)->execute([
+    
+    // Check if username already exists for a different staff ID
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM employee WHERE Username = ? AND staffID != ?");
+    $stmt->execute([$username, $d['staffID']]);
+    if ($stmt->fetchColumn() > 0) {
+        return ['ok' => false, 'msg' => "Username '$username' is already taken by another employee."];
+    }
+    
+    $params = [
         ':fn'  => ucwords(trim($d['FirstName'])),
         ':ln'  => ucwords(trim($d['LastName'])),
         ':bd'  => $d['BirthDate'],
@@ -68,7 +88,30 @@ function updateEmployee(PDO $pdo, array $d): void {
         ':pid' => $d['PositionID'],
         ':un'  => $username,
         ':id'  => $d['staffID'],
-    ]);
+    ];
+
+    $sql = "UPDATE employee
+            SET FirstName=:fn, LastName=:ln, BirthDate=:bd,
+                Email=:em, ContactNumber=:cn, PositionID=:pid, Username=:un";
+                
+    if ($clearPassword) {
+        $sql .= ", PasswordHash = NULL";
+    } elseif (!empty($newPassword)) {
+        $sql .= ", PasswordHash = :hash";
+        $params[':hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+    }
+    
+    $sql .= " WHERE staffID=:id";
+    
+    try {
+        $pdo->prepare($sql)->execute($params);
+        return ['ok' => true];
+    } catch (PDOException $e) {
+        if ($e->getCode() == 23000) {
+            return ['ok' => false, 'msg' => "Username '$username' is already taken."];
+        }
+        throw $e;
+    }
 }
 
 function getAdminUser(PDO $pdo, string $username): ?array {

@@ -23,7 +23,7 @@ if (!$order_id || !in_array($status, ['Verified', 'Rejected'])) {
 try {
     $stmt = $pdo->prepare("UPDATE orders SET PaymentVerification = ? WHERE OrderID = ?");
     $stmt->execute([$status, $order_id]);
-    
+
     echo JSON_encode(['ok' => true, 'msg' => 'Verification updated']);
 } catch (Exception $e) {
     echo JSON_encode(['ok' => false, 'msg' => 'Database error: ' . $e->getMessage()]);

@@ -36,6 +36,18 @@ if (!$isAdmin && !$isClockedIn) {
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'poll_status') {
+    header('Content-Type: application/json');
+    try {
+        $stmt = $pdo->query("SELECT OrderID, Status FROM orders ORDER BY OrderID DESC");
+        $statuses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['ok' => true, 'statuses' => $statuses]);
+    } catch (Exception $e) {
+        echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // Fetch all orders
 $stmt = $pdo->query("
     SELECT o.OrderID, o.GrandTotal, o.OrderDate, o.Status, o.PaymentMode, e.FirstName, e.LastName 
@@ -182,6 +194,9 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                     <label style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight:bold;">Order Status</label>
                     <select id="orderStatusFilter" class="form-input" style="margin-top:4px;">
                         <option value="all">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Preparing">Preparing</option>
+                        <option value="Ready">Ready</option>
                         <option value="Completed">Completed</option>
                         <option value="Voided">Voided</option>
                     </select>
@@ -209,7 +224,7 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                         </thead>
                         <tbody>
                             <?php foreach ($orders as $o): ?>
-                                <tr class="row-hover" onclick="openReceipt(<?= $o['OrderID'] ?>)">
+                                <tr class="row-hover" data-order-id="<?= $o['OrderID'] ?>" onclick="openReceipt(<?= $o['OrderID'] ?>)">
                                     <td class="text-bold">#<?= str_pad($o['OrderID'], 5, '0', STR_PAD_LEFT) ?></td>
                                     <td class="text-muted"><?= date('M j, Y h:i A', strtotime($o['OrderDate'])) ?></td>
                                     <td><?= htmlspecialchars($o['FirstName'] ? ($o['FirstName'] . ' ' . $o['LastName']) : 'Admin') ?></td>
@@ -222,7 +237,7 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                                     </td>
                                     <td class="item-total-bold">₱<?= number_format($o['GrandTotal'], 2) ?></td>
                                     <td><span
-                                            class="status-badge status-<?= htmlspecialchars($o['Status']) ?>"><?= htmlspecialchars($o['Status']) ?></span>
+                                             class="status-badge status-<?= htmlspecialchars($o['Status']) ?>" data-status-badge="<?= $o['OrderID'] ?>"><?= htmlspecialchars($o['Status']) ?></span>
                                     </td>
                                     <td><button class="btn btn-receipt-view">View Receipt</button></td>
                                 </tr>
@@ -468,6 +483,33 @@ if (!in_array($thermalWidthMm, [58, 80], true)) {
                     row.style.display = show ? '' : 'none';
                 });
             }
+
+            // Poll statuses every 5 seconds
+            function pollStatuses() {
+                fetch('orders.php?action=poll_status')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.ok && Array.isArray(data.statuses)) {
+                            let changed = false;
+                            data.statuses.forEach(item => {
+                                const badge = document.querySelector(`[data-status-badge="${item.OrderID}"]`);
+                                if (badge) {
+                                    const oldStatus = badge.textContent.trim();
+                                    if (oldStatus !== item.Status) {
+                                        badge.textContent = item.Status;
+                                        badge.className = 'status-badge status-' + item.Status;
+                                        changed = true;
+                                    }
+                                }
+                            });
+                            if (changed) {
+                                filterOrders();
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error polling statuses:', err));
+            }
+            setInterval(pollStatuses, 5000);
 
             window.resetOrderFilters = function() {
                 fp.clear();

@@ -142,7 +142,7 @@ try {
     $grandTotal = $discountedSubtotal + $tax;
 
     // Insert Order
-    $stmt = $pdo->prepare("INSERT INTO orders (StaffID, SubTotal, Tax, GrandTotal, Status, PaymentMode, ReferenceNumber, PaymentPlatform, OrderType, TableNumber, DiscountID, DiscountAmount, SpecialRequest) VALUES (?, ?, ?, ?, 'Completed', ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO orders (StaffID, SubTotal, Tax, GrandTotal, Status, PaymentMode, ReferenceNumber, PaymentPlatform, OrderType, TableNumber, DiscountID, DiscountAmount, SpecialRequest) VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([$staffID, $subtotal, $tax, $grandTotal, $paymentMode, $refNumber, $paymentPlatform, $orderType, $tableNumber, $discountID, $discountAmount, empty($specialRequest) ? null : $specialRequest]);
     $orderID = $pdo->lastInsertId();
 

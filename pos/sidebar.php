@@ -1,5 +1,10 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
+$s_pos = $_SESSION['position_id'] ?? null;
+$isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
+$isManager = ($s_pos == 1);
+$isCashier = ($s_pos == 3);
 ?>
 <?php if (!$isSuperAdmin): ?>
     <aside class="pos-sidebar" id="sidebar">
@@ -21,14 +26,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         class="menu-text">Discounts</span></a>
                 <a href="payroll.php" <?= $currentPage === 'payroll.php' ? 'class="active"' : '' ?>><span
                         class="menu-text">Payroll</span></a>
-                <div class="nav-group-header" style="margin-top: 16px;">Cashier Access</div>
-            <?php else: ?>
-                <div class="nav-group-header">Cashier Access</div>
             <?php endif; ?>
+            
+            <div class="nav-group-header" style="margin-top: 16px;">Cashier Access</div>
             <a href="index.php" <?= $currentPage === 'index.php' ? 'class="active"' : '' ?>><span class="menu-text">Order
                     Terminal</span></a>
             <a href="orders.php" <?= $currentPage === 'orders.php' ? 'class="active"' : '' ?>><span class="menu-text">Order
                     History</span></a>
+            
+            <div class="nav-group-header" style="margin-top: 16px;">Kitchen Access</div>
+            <a href="kitchen.php" <?= $currentPage === 'kitchen.php' ? 'class="active"' : '' ?>><span class="menu-text">Kitchen Queue</span></a>
         </nav>
         <div class="sidebar-footer">
             <a href="../employees/index.php" class="btn btn-logout link-block">Return to Kiosk</a>
