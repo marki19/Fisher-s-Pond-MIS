@@ -4,6 +4,7 @@ $s_pos = $_SESSION['position_id'] ?? null;
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
 $isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
 $isManager = ($s_pos == 1);
+$isCook = ($s_pos == 2);
 $isCashier = ($s_pos == 3);
 ?>
 <?php if (!$isSuperAdmin): ?>
@@ -28,14 +29,18 @@ $isCashier = ($s_pos == 3);
                         class="menu-text">Payroll</span></a>
             <?php endif; ?>
             
+            <?php if ($isAdmin || $isManager || $isCashier): ?>
             <div class="nav-group-header" style="margin-top: 16px;">Cashier Access</div>
             <a href="index.php" <?= $currentPage === 'index.php' ? 'class="active"' : '' ?>><span class="menu-text">Order
                     Terminal</span></a>
             <a href="orders.php" <?= $currentPage === 'orders.php' ? 'class="active"' : '' ?>><span class="menu-text">Order
                     History</span></a>
+            <?php endif; ?>
             
+            <?php if ($isAdmin || $isManager || $isCashier || $isCook): ?>
             <div class="nav-group-header" style="margin-top: 16px;">Kitchen Access</div>
             <a href="kitchen.php" <?= $currentPage === 'kitchen.php' ? 'class="active"' : '' ?>><span class="menu-text">Kitchen Queue</span></a>
+            <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
             <a href="../employees/index.php" class="btn btn-logout link-block">Return to Kiosk</a>

@@ -128,7 +128,7 @@ unset($_SESSION['logout_msg']);
         <div class="modal-content" style="background: white; padding: 32px; border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); max-width: 420px; width: 90%; position: relative; border: 1px solid var(--border-color); text-align: left; animation: fadeIn 0.2s ease;">
             <h2 style="font-size: 1.5rem; color: var(--primary-dark); margin-bottom: 12px; font-weight: 700;">Reset Password</h2>
             <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px;">
-                For security reasons, self-service password reset is disabled. Please contact a <strong>Manager</strong> or <strong>Administrator</strong> to reset your password or reactivate your account activation wizard.
+                For security reasons, self-service password reset is disabled. Please contact an <strong>Administrator</strong> to reset your password or reactivate your account activation wizard.
             </p>
             <button type="button" class="submit-btn" style="margin-top: 0;" onclick="closeForgotModal()">Got It</button>
         </div>

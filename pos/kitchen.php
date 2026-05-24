@@ -6,9 +6,24 @@ require __DIR__ . '/../config.php';
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
 $isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
+$isCook = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 2;
 $isCashier = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 3;
 
-if (!$isSuperAdmin && !$isManager && !$isCashier) {
+$isClockedIn = false;
+if (isset($_SESSION['active_staffID'])) {
+    $checkShift = $pdo->prepare("SELECT ShiftID FROM employeeshift WHERE StaffID = ? AND ClockOut IS NULL");
+    $checkShift->execute([$_SESSION['active_staffID']]);
+    $isClockedIn = $checkShift->fetch() ? true : false;
+}
+
+if (!$isSuperAdmin && !$isManager && !$isCashier && !$isCook) {
+    header("Location: ../employees/index.php");
+    exit;
+}
+
+if (!$isAdmin && !$isClockedIn) {
+    $_SESSION['kiosk_msg'] = 'Access Denied: You must clock in first before accessing the Kitchen Queue.';
+    $_SESSION['kiosk_msg_type'] = 'error';
     header("Location: ../employees/index.php");
     exit;
 }

@@ -142,16 +142,28 @@ if ($loggedIn && $view === 'default') {
                                 Details</strong><small>Profile &amp; password</small></span></button>
                     <?php 
                     $showPOS = ($_SESSION['position_id'] == 1 || $_SESSION['position_id'] == 3);
+                    $showKitchen = ($_SESSION['position_id'] == 2);
+                    $disabledAttr = !$isClockedIn ? 'disabled' : '';
+                    $disabledStyle = !$isClockedIn ? 'opacity:0.5; cursor:not-allowed;' : '';
                     ?>
-                    <?php if ($showPOS): ?>
+                    <?php if ($showPOS || $showKitchen): ?>
                         <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">
                         <div class="clock-section-label">Operations</div>
                         
-                        <button onclick="window.location.href='../pos/index.php'" class="btn clock-nav-btn"
-                            style="border-color: var(--primary); background: var(--primary-lighter); margin-bottom: 10px;"><span
+                        <?php if ($showPOS): ?>
+                        <button <?= $disabledAttr ?> onclick="window.location.href='../pos/index.php'" class="btn clock-nav-btn"
+                            style="border-color: var(--primary); background: var(--primary-lighter); margin-bottom: 10px; <?= $disabledStyle ?>"><span
                                 class="clock-nav-icon">&#128187;</span><span class="clock-nav-text"><strong
                                     style="color: var(--primary-dark);">Launch POS Terminal</strong><small>Open cash
                                     register</small></span></button>
+                        <?php endif; ?>
+
+                        <?php if ($showKitchen): ?>
+                        <button <?= $disabledAttr ?> onclick="window.location.href='../pos/kitchen.php'" class="btn clock-nav-btn"
+                            style="border-color: #f59e0b; background: #fffbeb; margin-bottom: 10px; <?= $disabledStyle ?>"><span
+                                class="clock-nav-icon">&#127859;</span><span class="clock-nav-text"><strong
+                                    style="color: #b45309;">Launch Kitchen Queue</strong><small>Manage pending orders</small></span></button>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">
                     <form method="POST" style="width:100%;"><input type="hidden" name="action" value="logout">
