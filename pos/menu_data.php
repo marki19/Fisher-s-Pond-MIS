@@ -197,4 +197,30 @@ function toggleItemAvailability(PDO $pdo, int $itemID, int $status): bool {
     return $stmt->execute([$status, $itemID]);
 }
 
+function getCategoryIdByName(PDO $pdo, string $name, int $isTracked): int {
+    $name = ucwords(trim($name));
+    if (empty($name)) {
+        return 0;
+    }
+    
+    // Check if exists
+    $stmt = $pdo->prepare("SELECT CategoryID FROM category WHERE LOWER(TRIM(CategoryName)) = LOWER(TRIM(?))");
+    $stmt->execute([$name]);
+    $catId = $stmt->fetchColumn();
+    
+    if ($catId) {
+        return (int) $catId;
+    }
+    
+    // Create new
+    $insert = $pdo->prepare("INSERT INTO category (CategoryName, IsActive, IsInventoryTracked) VALUES (?, 1, ?)");
+    if ($insert->execute([$name, $isTracked])) {
+        return (int) $pdo->lastInsertId();
+    }
+    
+    return 0;
+}
+
+
+
 ?>

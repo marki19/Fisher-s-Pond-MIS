@@ -9,8 +9,16 @@ require __DIR__ . '/../config.php';
 require __DIR__ . '/menu_data.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+
+
+
 $isSuperAdmin = $isAdmin && ($_SESSION['admin_role'] ?? 'Admin') === 'Admin';
 $isManager = isset($_SESSION['position_id']) && $_SESSION['position_id'] == 1;
+
+$isEmbedded = isset($_GET['embedded']) && $_GET['embedded'] == '1';
+if ($isEmbedded) {
+    echo '<style>.modal { transform: translateX(-130px) !important; }</style>';
+}
 
 $isClockedIn = false;
 if (isset($_SESSION['active_staffID'])) {
@@ -120,6 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $msg = "Failed to update category. The name may already exist.";
         }
+
     } elseif ($action === 'delete_cat') {
         $catID = (int) ($_POST['CategoryID'] ?? 0);
         $newStatus = (int) ($_POST['status'] ?? 0);
@@ -206,6 +215,14 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                         style="margin: 0; padding: 6px 12px; font-size: 0.9rem; width: 200px; height: auto;"
                                         onkeyup="filterMenuTable()" autocapitalize="off" autocorrect="off"
                                         spellcheck="false">
+                                    <select id="categoryFilter" class="form-input"
+                                        style="margin: 0; padding: 6px 12px; font-size: 0.9rem; width: auto; height: auto;"
+                                        onchange="filterMenuTable()">
+                                        <option value="all">All Categories</option>
+                                        <?php foreach ($categories as $cat): ?>
+                                            <option value="<?= htmlspecialchars($cat['CategoryName']) ?>"><?= htmlspecialchars($cat['CategoryName']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
                                     <select id="menuFilter" class="form-input"
                                         style="margin: 0; padding: 6px 12px; font-size: 0.9rem; width: auto; height: auto;"
                                         onchange="filterMenuTable()">
@@ -215,9 +232,10 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                     </select>
                                 </div>
                             </div>
-                            <button class="btn btn-clock-in btn-small"
-                                onclick="document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addModal').style.display='flex';"
-                                style="margin:0;">+ Add New Item</button>
+
+                                <button class="btn btn-clock-in btn-small"
+                                    onclick="document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addModal').style.display='flex';"
+                                    style="margin:0;">+ Add New Item</button>
                         </div>
                         <div style="overflow-y: auto; overflow-x: auto; flex: 1; min-height: 0;">
                             <table class="data-table" style="width: 100%;" id="menuTable">
@@ -235,7 +253,8 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                 <tbody>
                                     <?php foreach ($menuItems as $item): ?>
                                         <tr class="row-hover menu-row"
-                                            data-status="<?= $item['IsAvailable'] == 1 ? 'available' : 'unavailable' ?>">
+                                            data-status="<?= $item['IsAvailable'] == 1 ? 'available' : 'unavailable' ?>"
+                                            data-category="<?= htmlspecialchars($item['CategoryName']) ?>">
                                             <td class="text-bold"><?= htmlspecialchars($item['ItemName']) ?></td>
                                             <td><span class="badge"
                                                     style="background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color);"><?= htmlspecialchars($item['CategoryName']) ?></span>
@@ -383,7 +402,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                         <div class="form-group-inline mb-15">
                             <label>Item Name</label>
-                            <input type="text" name="ItemName" required class="form-input">
+                            <input type="text" name="ItemName" required class="form-input" style="text-transform: capitalize;">
                         </div>
                         <div class="form-group-inline mb-15">
                             <label>Category Group</label>
@@ -461,7 +480,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                     <div style="display: flex; gap: 14px;">
                         <div class="form-group-inline mb-15" style="margin-bottom: 0;">
                             <label>Item Name</label>
-                            <input type="text" name="ItemName" id="edit_ItemName" required class="form-input">
+                            <input type="text" name="ItemName" id="edit_ItemName" required class="form-input" style="text-transform: capitalize;">
                         </div>
                         <div class="form-group-inline mb-15" style="margin-bottom: 0;">
                             <label>Category Group</label>
@@ -574,6 +593,8 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
         </div>
     </div>
 
+
+
     <script>
         function editItem(item) {
             document.getElementById('edit_ItemID').value = item.ItemID;
@@ -681,17 +702,20 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
 
         function filterMenuTable() {
             const filterValue = document.getElementById('menuFilter').value;
+            const categoryValue = document.getElementById('categoryFilter').value;
             const searchValue = document.getElementById('menuSearch').value.toLowerCase();
             const rows = document.querySelectorAll('#menuTable tbody tr.menu-row');
 
             rows.forEach(row => {
                 const status = row.getAttribute('data-status');
+                const category = row.getAttribute('data-category');
                 const rowText = row.innerText.toLowerCase();
 
                 const matchesStatus = (filterValue === 'all') || (filterValue === status);
+                const matchesCategory = (categoryValue === 'all') || (categoryValue === category);
                 const matchesSearch = rowText.includes(searchValue);
 
-                if (matchesStatus && matchesSearch) {
+                if (matchesStatus && matchesCategory && matchesSearch) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
