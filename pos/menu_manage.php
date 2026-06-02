@@ -58,37 +58,59 @@ $msgType = 'error';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    $imageUploadFailed = false;
     $imagePath = null;
     if (isset($_FILES['Image']) && $_FILES['Image']['error'] === 0) {
         $file = $_FILES['Image'];
         $check = getimagesize($file['tmp_name']);
         if ($check !== false) {
-            $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (in_array($check['mime'], $allowed)) {
-                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $mimeToExt = [
+                'image/jpeg' => 'jpg',
+                'image/png'  => 'png',
+                'image/gif'  => 'gif',
+                'image/webp' => 'webp'
+            ];
+            
+            if (array_key_exists($check['mime'], $mimeToExt)) {
+                $ext = $mimeToExt[$check['mime']];
                 $fileName = uniqid() . "." . $ext;
                 $path = "uploads/" . $fileName;
                 if (move_uploaded_file($file['tmp_name'], $path)) {
                     $imagePath = $path;
+                } else {
+                    $imageUploadFailed = true;
+                    $msg = "Failed to upload image. Check permissions.";
                 }
+            } else {
+                $imageUploadFailed = true;
+                $msg = "Unsupported image format.";
             }
+        } else {
+            $imageUploadFailed = true;
+            $msg = "Uploaded file is not a valid image.";
         }
     }
 
     if ($action === 'add_item') {
-        if (addMenuItem($pdo, $_POST, $imagePath)) {
+        if ($imageUploadFailed) {
+            $msgType = 'error';
+        } elseif (addMenuItem($pdo, $_POST, $imagePath)) {
             $msg = "Item added successfully.";
             $msgType = 'success';
         } else {
             $msg = "Failed to add item.";
+            $msgType = 'error';
         }
     } elseif ($action === 'edit_item') {
         $itemID = (int) $_POST['ItemID'];
-        if (updateMenuItem($pdo, $itemID, $_POST, $imagePath)) {
+        if ($imageUploadFailed) {
+            $msgType = 'error';
+        } elseif (updateMenuItem($pdo, $itemID, $_POST, $imagePath)) {
             $msg = "Item updated successfully.";
             $msgType = 'success';
         } else {
             $msg = "Failed to update item.";
+            $msgType = 'error';
         }
     } elseif ($action === 'toggle_status') {
         $itemID = (int) $_POST['ItemID'];
@@ -158,6 +180,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
     <title>Menu Management | Fisher's Pond Seafood and Grill POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
+    <script src="menu_manage.js?v=<?= time() ?>" defer></script>
 </head>
 
 <body>
@@ -265,8 +288,10 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                                 <?php if ((int)($item['IsInventoryTracked'] ?? 0) === 1): ?>
                                                     <div class="flex-row-gap" style="gap:6px; align-items:center;">
                                                         <span class="text-bold"><?= number_format((float) ($item['StockQty'] ?? 0), 0) ?></span>
-                                                        <button type="button" class="btn btn-outline btn-small" style="margin:0; padding:5px 8px;"
-                                                            onclick="openStockAdjustModal(<?= (int) $item['ItemID'] ?>, <?= htmlspecialchars(json_encode($item['ItemName'])) ?>, <?= (float) ($item['StockQty'] ?? 0) ?>)">
+                                                        <button type="button" class="btn btn-outline btn-small btn-adjust-stock" style="margin:0; padding:5px 8px;"
+                                                            data-item-id="<?= (int) $item['ItemID'] ?>"
+                                                            data-item-name="<?= htmlspecialchars($item['ItemName'], ENT_QUOTES, 'UTF-8') ?>"
+                                                            data-stock-qty="<?= (float) ($item['StockQty'] ?? 0) ?>">
                                                             Adjust
                                                         </button>
                                                     </div>
@@ -289,8 +314,14 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                             </td>
                                             <td style="text-align: right; white-space: nowrap;">
                                                 <div class="flex-row-gap" style="justify-content: flex-end; gap:6px;">
-                                                    <button class="btn btn-outline btn-small btn-edit" style="margin:0;"
-                                                        onclick="editItem(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                                                    <button class="btn btn-outline btn-small btn-edit btn-edit-item" style="margin:0;"
+                                                        data-item-id="<?= (int)$item['ItemID'] ?>"
+                                                        data-item-name="<?= htmlspecialchars($item['ItemName'], ENT_QUOTES, 'UTF-8') ?>"
+                                                        data-category-id="<?= (int)$item['CategoryID'] ?>"
+                                                        data-price="<?= (float)$item['Price'] ?>"
+                                                        data-is-available="<?= (int)$item['IsAvailable'] ?>"
+                                                        data-is-tracked="<?= (int)($item['IsInventoryTracked'] ?? 0) ?>"
+                                                        data-stock-qty="<?= (float)($item['StockQty'] ?? 0) ?>">Edit</button>
                                                     <form method="POST" class="inline-block"
                                                         style="margin:0; display:inline-block;">
                                                         <input type="hidden" name="action" value="toggle_status">
@@ -356,9 +387,11 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
                                             <span
                                                 style="font-weight: 500; font-size: 0.95rem; color: var(--text-dark);"><?= htmlspecialchars($cat['CategoryName']) ?></span>
                                             <div class="flex-row-gap" style="gap: 8px;">
-                                                <button class="btn btn-outline btn-small btn-edit"
+                                                <button class="btn btn-outline btn-small btn-edit btn-edit-category"
                                                     style="margin: 0; padding: 6px 10px;"
-                                                    onclick="editCategory(<?= $cat['CategoryID'] ?>, <?= htmlspecialchars(json_encode($cat['CategoryName'])) ?>, <?= (int) ($cat['IsInventoryTracked'] ?? 0) ?>)">Edit</button>
+                                                    data-cat-id="<?= (int)$cat['CategoryID'] ?>"
+                                                    data-cat-name="<?= htmlspecialchars($cat['CategoryName'], ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-cat-tracked="<?= (int) ($cat['IsInventoryTracked'] ?? 0) ?>">Edit</button>
                                                 <form method="POST" style="margin: 0; display: inline-block;"
                                                     onsubmit="return confirm('Are you sure you want to <?= ((int) ($cat['IsActive'] ?? 1) === 1) ? 'disable' : 'enable' ?> this category?');">
                                                     <input type="hidden" name="action" value="delete_cat">
@@ -595,160 +628,7 @@ $roleName = $isSuperAdmin ? 'Admin' : ($isAdmin ? 'Administrator' : 'Manager');
 
 
 
-    <script>
-        function editItem(item) {
-            document.getElementById('edit_ItemID').value = item.ItemID;
-            document.getElementById('edit_ItemName').value = item.ItemName;
-            document.getElementById('edit_CategoryID').value = item.CategoryID;
-            document.getElementById('edit_Price').value = item.Price;
-            document.getElementById('edit_IsAvailable').value = item.IsAvailable;
-            
-            const stockInput = document.getElementById('edit_StockQty');
-            if (parseInt(item.IsInventoryTracked || 0) === 1) {
-                stockInput.disabled = false;
-                stockInput.value = parseInt(item.StockQty) || 0;
-            } else {
-                stockInput.disabled = true;
-                stockInput.value = '';
-            }
 
-            document.getElementById('editModal').classList.remove('hidden');
-            document.getElementById('editModal').style.display = 'flex';
-        }
-
-        function editCategory(id, name, tracked) {
-            document.getElementById('edit_CatID').value = id;
-            document.getElementById('edit_CatName').value = name;
-            document.getElementById('edit_CatTracked').checked = (tracked == 1);
-            document.getElementById('editCatModal').classList.remove('hidden');
-            document.getElementById('editCatModal').style.display = 'flex';
-        }
-
-        function openStockAdjustModal(itemID, itemName, currentStock) {
-            document.getElementById('stockAdjustItemID').value = itemID;
-            document.getElementById('stockAdjustItemName').value = itemName;
-            document.getElementById('stockAdjustCurrentStock').value = Number(currentStock).toFixed(2);
-            const modal = document.getElementById('stockAdjustModal');
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        }
-
-        function closeStockAdjustModal() {
-            const modal = document.getElementById('stockAdjustModal');
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
-        }
-
-        function toggleAddStock(selectElem) {
-            const selectedOption = selectElem.options[selectElem.selectedIndex];
-            const tracked = parseInt(selectedOption.getAttribute('data-tracked') || 0);
-            const stockInput = document.getElementById('add_StockQty');
-            
-            if (tracked === 1) {
-                stockInput.disabled = false;
-            } else {
-                stockInput.disabled = true;
-                stockInput.value = '';
-            }
-        }
-
-        function setupImagePreview(inputId, messageId, previewId) {
-            const input = document.getElementById(inputId);
-            const message = document.getElementById(messageId);
-            const preview = document.getElementById(previewId);
-
-            if (!input) return;
-
-            input.addEventListener("change", function () {
-                const file = this.files[0];
-                message.textContent = "";
-                preview.innerHTML = "";
-
-                if (!file) return;
-
-                // preview
-                const reader = new FileReader();
-                reader.onload = e => {
-                    preview.innerHTML = `<img src="${e.target.result}" style="max-width: 80px; max-height: 80px; border-radius: 4px; border: 1px solid var(--border-color); object-fit: cover;">`;
-                };
-                reader.readAsDataURL(file);
-
-                const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-                const maxSize = 5 * 1024 * 1024;
-
-                if (!allowed.includes(file.type)) {
-                    message.textContent = "Invalid file type";
-                    message.style.color = "red";
-                    this.value = "";
-                    preview.innerHTML = "";
-                    return;
-                }
-
-                if (file.size > maxSize) {
-                    message.textContent = "File too large (max 5MB)";
-                    message.style.color = "red";
-                    this.value = "";
-                    preview.innerHTML = "";
-                    return;
-                }
-
-                message.textContent = "Image looks valid";
-                message.style.color = "green";
-            });
-        }
-
-        setupImagePreview("addImageInput", "addMessage", "addPreview");
-        setupImagePreview("editImageInput", "editMessage", "editPreview");
-
-        function filterMenuTable() {
-            const filterValue = document.getElementById('menuFilter').value;
-            const categoryValue = document.getElementById('categoryFilter').value;
-            const searchValue = document.getElementById('menuSearch').value.toLowerCase();
-            const rows = document.querySelectorAll('#menuTable tbody tr.menu-row');
-
-            rows.forEach(row => {
-                const status = row.getAttribute('data-status');
-                const category = row.getAttribute('data-category');
-                const rowText = row.innerText.toLowerCase();
-
-                const matchesStatus = (filterValue === 'all') || (filterValue === status);
-                const matchesCategory = (categoryValue === 'all') || (categoryValue === category);
-                const matchesSearch = rowText.includes(searchValue);
-
-                if (matchesStatus && matchesCategory && matchesSearch) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-    </script>
-
-    <script>
-        function showToast(message, type = 'default') {
-            const container = document.getElementById('toastContainer') || (() => {
-                const div = document.createElement('div');
-                div.id = 'toastContainer';
-                div.className = 'toast-container';
-                document.body.appendChild(div);
-                return div;
-            })();
-
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.innerText = message;
-            toast.style.cursor = 'pointer';
-            toast.addEventListener('click', () => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); });
-
-            container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-    </script>
 </body>
 
 </html>
