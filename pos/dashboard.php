@@ -189,6 +189,77 @@ foreach ($peakData as $p) {
     $dssPeakData[] = (int) $p['order_volume'];
 }
 
+// --- DSS Narrative Generation ---
+// --- DSS Narrative Generation ---
+$narrativeMenu = "Not enough data yet to provide menu insights.";
+if (!empty($topItems) && !empty($bottomItems)) {
+    $topItem = $topItems[0];
+    $bottomItem = $bottomItems[0];
+
+    $recBadge = "<div style='margin-top: 12px;'><span style='background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;'>💡 Recommendation</span></div>";
+
+    if ($topItem['ItemName'] !== $bottomItem['ItemName']) {
+        $narrativeMenu = "🔥 <strong>Hot Item:</strong> Customers love the <strong>" . htmlspecialchars($topItem['ItemName']) . "</strong>! It's your best seller with <strong>" . (int) $topItem['total_sold'] . "</strong> orders.<br><br>📉 <strong>Needs Attention:</strong> The <strong>" . htmlspecialchars($bottomItem['ItemName']) . "</strong> isn't selling as much (only <strong>" . (int) $bottomItem['total_sold'] . "</strong> orders).";
+        $narrativeMenu .= $recBadge . "<p style='margin-top: 8px; margin-bottom: 0;'>Try running a promo on the <strong>" . htmlspecialchars($topItem['ItemName']) . "</strong> to boost sales even further. You might also want to look into why the <strong>" . htmlspecialchars($bottomItem['ItemName']) . "</strong> isn't moving—maybe adjust the price or recipe?</p>";
+    } else {
+        $narrativeMenu = "🔥 <strong>Hot Item:</strong> Your best selling item is <strong>" . htmlspecialchars($topItem['ItemName']) . "</strong> with <strong>" . (int) $topItem['total_sold'] . "</strong> orders. Great job!";
+    }
+}
+
+$narrativeInventory = "✅ <strong>Stock is Looking Good!</strong><br>Everything is currently well-stocked. No immediate orders needed.";
+if (!empty($stockAlerts)) {
+    $lowestItem = $stockAlerts[0];
+    $actionBadge = "<div style='margin-top: 12px;'><span style='background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;'>🛒 Action Needed</span></div>";
+
+    if ((int) $lowestItem['StockQty'] <= 20) {
+        $narrativeInventory = "⚠️ <strong>Low Stock Alert:</strong> You're running out of <strong>" . htmlspecialchars($lowestItem['ItemName']) . "</strong>! There are only <strong>" . (int) $lowestItem['StockQty'] . "</strong> left.";
+        if (count($stockAlerts) > 1 && (int) $stockAlerts[1]['StockQty'] <= 20) {
+            $narrativeInventory .= "<br>Also keep an eye on <strong>" . htmlspecialchars($stockAlerts[1]['ItemName']) . "</strong> (only <strong>" . (int) $stockAlerts[1]['StockQty'] . "</strong> left).";
+        }
+        $narrativeInventory .= $actionBadge . "<p style='margin-top: 8px; margin-bottom: 0;'>Contact your supplier and order more <strong>" . htmlspecialchars($lowestItem['ItemName']) . "</strong> right away before you run out and lose sales.</p>";
+    } else {
+        $narrativeInventory = "✅ <strong>Stock is Looking Good!</strong><br><br>Your lowest item is <strong>" . htmlspecialchars($lowestItem['ItemName']) . "</strong> with <strong>" . (int) $lowestItem['StockQty'] . "</strong> left. Everything is currently well-stocked. No immediate orders needed.";
+    }
+}
+
+$narrativePeak = "Not enough order data to determine your busiest hours yet.";
+if (!empty($peakData)) {
+    $maxVol = -1;
+    $maxHour = "";
+    $minVol = 999999;
+    $minHour = "";
+    foreach ($peakData as $p) {
+        if ((int) $p['order_volume'] > $maxVol) {
+            $maxVol = (int) $p['order_volume'];
+            $maxHour = $p['hour_of_day'];
+        }
+        if ((int) $p['order_volume'] < $minVol) {
+            $minVol = (int) $p['order_volume'];
+            $minHour = $p['hour_of_day'];
+        }
+    }
+
+    $formatHour = function ($hr) {
+        $hr = (int) $hr;
+        $ampm = $hr >= 12 ? 'PM' : 'AM';
+        $hr12 = $hr % 12;
+        if ($hr12 == 0)
+            $hr12 = 12;
+        return $hr12 . ' ' . $ampm;
+    };
+
+    $staffBadge = "<div style='margin-top: 12px;'><span style='background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;'>👥 Staffing Tip</span></div>";
+
+    $narrativePeak = "⏰ <strong>Busiest Time:</strong> Expect a rush around <strong>" . $formatHour($maxHour) . "</strong> (highest volume of orders).";
+
+    if ($maxHour != $minHour && count($peakData) > 1) {
+        $narrativePeak .= "<br><br>☕ <strong>Quiet Time:</strong> Things slow down around <strong>" . $formatHour($minHour) . "</strong>.";
+        $narrativePeak .= $staffBadge . "<p style='margin-top: 8px; margin-bottom: 0;'>Make sure you have your best staff scheduled around <strong>" . $formatHour($maxHour) . "</strong> to handle the rush. Use the slower <strong>" . $formatHour($minHour) . "</strong> block for staff breaks or prep work.</p>";
+    } else {
+        $narrativePeak .= $staffBadge . "<p style='margin-top: 8px; margin-bottom: 0;'>Ensure maximum staff availability during this window to maintain service speed.</p>";
+    }
+}
+
 
 ?>
 <!DOCTYPE html>
@@ -250,8 +321,8 @@ foreach ($peakData as $p) {
                             style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Range</span>
                         <div class="flex-row-center" style="gap: 4px;">
                             <input type="text" name="dashboard_range" id="dashboard_range"
-                                value="<?= htmlspecialchars($custom_start ? ($custom_start . ' to ' . $custom_end) : '') ?>" class="form-input form-input-nomargin"
-                                placeholder="Select Date Range..."
+                                value="<?= htmlspecialchars($custom_start ? ($custom_start . ' to ' . $custom_end) : '') ?>"
+                                class="form-input form-input-nomargin" placeholder="Select Date Range..."
                                 style="width: 200px; padding: 4px 8px; font-size: 0.85rem;">
                         </div>
                         <button type="submit"
@@ -298,34 +369,49 @@ foreach ($peakData as $p) {
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
                     <!-- Menu Engineering Chart -->
                     <div
-                        style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc; height: 300px; position: relative;">
-                        <h3
-                            style="margin-top: 0; font-size: 1rem; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-                            Top 10 Performing Items</h3>
-                        <div style="position: relative; height: calc(100% - 40px); width: 100%;">
+                        style="border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="padding: 16px; border-bottom: 1px solid #e2e8f0; background: #fff;">
+                            <h3 style="margin-top: 0; font-size: 1rem; color: #334155; margin-bottom: 0;">Top 10
+                                Performing Items</h3>
+                        </div>
+                        <div style="height: 250px; padding: 16px; position: relative; width: 100%; background: #fff;">
                             <canvas id="dssPerfChart"></canvas>
+                        </div>
+                        <div
+                            style="padding: 16px; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 0.9rem; color: #334155; line-height: 1.6; flex-grow: 1;">
+                            <?= $narrativeMenu ?>
                         </div>
                     </div>
 
                     <!-- Inventory Velocity Chart -->
                     <div
-                        style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc; height: 300px; position: relative;">
-                        <h3
-                            style="margin-top: 0; font-size: 1rem; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-                            Tracked Inventory Alert (Lowest 10)</h3>
-                        <div style="position: relative; height: calc(100% - 40px); width: 100%;">
+                        style="border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="padding: 16px; border-bottom: 1px solid #e2e8f0; background: #fff;">
+                            <h3 style="margin-top: 0; font-size: 1rem; color: #334155; margin-bottom: 0;">Tracked
+                                Inventory Alert (Lowest 10)</h3>
+                        </div>
+                        <div style="height: 250px; padding: 16px; position: relative; width: 100%; background: #fff;">
                             <canvas id="dssStockChart"></canvas>
+                        </div>
+                        <div
+                            style="padding: 16px; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 0.9rem; color: #334155; line-height: 1.6; flex-grow: 1;">
+                            <?= $narrativeInventory ?>
                         </div>
                     </div>
 
                     <!-- Operational Insights Chart -->
                     <div
-                        style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc; height: 300px; position: relative;">
-                        <h3
-                            style="margin-top: 0; font-size: 1rem; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-                            Operational Forecast (Peak Hours)</h3>
-                        <div style="position: relative; height: calc(100% - 40px); width: 100%;">
+                        style="border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="padding: 16px; border-bottom: 1px solid #e2e8f0; background: #fff;">
+                            <h3 style="margin-top: 0; font-size: 1rem; color: #334155; margin-bottom: 0;">Operational
+                                Forecast (Peak Hours)</h3>
+                        </div>
+                        <div style="height: 250px; padding: 16px; position: relative; width: 100%; background: #fff;">
                             <canvas id="dssPeakChart"></canvas>
+                        </div>
+                        <div
+                            style="padding: 16px; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 0.9rem; color: #334155; line-height: 1.6; flex-grow: 1;">
+                            <?= $narrativePeak ?>
                         </div>
                     </div>
                 </div>
@@ -652,7 +738,7 @@ foreach ($peakData as $p) {
             }
 
             paginateTable('recentOrdersTable', 10);
-            
+
             if (document.getElementById('dashboard_range')) {
                 flatpickr("#dashboard_range", {
                     mode: "range",
